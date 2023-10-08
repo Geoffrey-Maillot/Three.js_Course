@@ -1,1 +1,6 @@
-@use './tailwind.css';
+@import "./tailwind.css";
+
+/* Fix bug tailwind svg*/
+svg {
+  padding: 0 !important;
+}

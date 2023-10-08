@@ -1,4 +1,14 @@
-import * as THREE from 'three';
+import * as THREE from "three";
+import { initPage } from "../../initPage";
+import { threeJsJourneyLessons } from "../../../constant/index";
+
+initPage({
+  titlePage: "Basic Scene",
+  titleHeader: "03 - Scene Basic",
+  originalLesson: "https://threejs-journey.com/lessons/basic-scene",
+  lessonsList: threeJsJourneyLessons,
+});
+
 // Sizes
 const sizes = {
   with: 800,
@@ -9,14 +19,14 @@ const sizes = {
 };
 
 // Get Canvas ELement
-const canvas = document.querySelector('.webgl') as HTMLCanvasElement;
+const canvas = document.querySelector(".webgl") as HTMLCanvasElement;
 
 // Create Scene
 const scene = new THREE.Scene();
 
 // Red cube
 const geometry = new THREE.BoxGeometry(1, 1, 1);
-const material = new THREE.MeshBasicMaterial({ color: 'red' });
+const material = new THREE.MeshBasicMaterial({ color: "red" });
 const mesh = new THREE.Mesh(geometry, material);
 
 // Camera

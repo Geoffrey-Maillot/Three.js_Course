@@ -1,0 +1,112 @@
+<!doctype html>
+<!-- Only think todo in each page is to add script js/ts -->
+<html lang="fr" data-theme="dracula">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="stylesheet" href="/src/styles/main.css" />
+    <script
+      defer
+      type="module"
+      src="/src/js//threeJsJourney//03-basic-scene/main.ts"
+    ></script>
+    <title><!-- TITLE FROM JS--></title>
+  </head>
+  <body>
+    <header class="navbar flex gap-4 bg-base-200">
+      <label class="btn btn-circle swap swap-rotate" for="my-drawer">
+        <!-- this hidden checkbox controls the state -->
+        <input type="checkbox" />
+
+        <!-- hamburger icon -->
+        <svg
+          class="swap-off fill-current"
+          xmlns="http://www.w3.org/2000/svg"
+          width="32"
+          height="32"
+          viewBox="0 0 512 512"
+        >
+          <path
+            d="M64,384H448V341.33H64Zm0-106.67H448V234.67H64ZM64,128v42.67H448V128Z"
+          />
+        </svg>
+
+        <!-- close icon -->
+        <svg
+          class="swap-on fill-current"
+          xmlns="http://www.w3.org/2000/svg"
+          width="32"
+          height="32"
+          viewBox="0 0 512 512"
+        >
+          <polygon
+            points="400 145.49 366.51 112 256 222.51 145.49 112 112 145.49 222.51 256 112 366.51 145.49 400 256 289.49 366.51 400 400 366.51 289.49 256 400 145.49"
+          />
+        </svg>
+      </label>
+      <!--? HREF FROM JS-->
+      <!--? TITLE FROM JS-->
+      <a id="lesson-link" href="" title="" target="_blank">
+        <!--? TITLE FROM JS-->
+        <h1 id="title-page" class="text-2xl"></h1>
+      </a>
+      <div
+        class="tooltip tooltip-left ml-auto"
+        data-tip="Retourner aux choix des formations"
+      >
+        <a
+          href="/
+"
+        >
+          <button class="btn btn-circle">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5"
+              stroke="currentColor"
+              class="h-6 w-6"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M6.75 15.75L3 12m0 0l3.75-3.75M3 12h18"
+              />
+            </svg>
+          </button>
+        </a>
+      </div>
+    </header>
+
+    <!-- Canva -->
+    <div
+      id="app"
+      class="flex h-[calc(100vh_-_64px)] items-center justify-center"
+    >
+      <canvas class="webgl"></canvas>
+    </div>
+
+    <!-- Side menu -->
+    <div class="drawer">
+      <input id="my-drawer" type="checkbox" class="drawer-toggle" />
+      <div class="drawer-content">
+        <!-- Page content here -->
+      </div>
+      <div class="drawer-side">
+        <label
+          for="my-drawer"
+          aria-label="close sidebar"
+          class="drawer-overlay"
+        ></label>
+        <ul class="menu min-h-full w-80 bg-base-200 p-4 text-base-content">
+          <p class="text-xl">Liste des leçons</p>
+          <div class="divider"></div>
+          <div id="list-items">
+            <!--? LIST ITEM FROM JS -->
+          </div>
+        </ul>
+      </div>
+    </div>
+  </body>
+</html>

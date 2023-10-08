@@ -8,39 +8,59 @@
     <title>Three.Js Course</title>
   </head>
   <body>
-    <div class="text-3xl" id="app">
-      <a href="/html/ThreeJsJourney/03-Basic-scene.html">TEST</a>
-    </div>
-    <h1 class="text-3xl font-bold underline">Hello world!</h1>
-    <!-- Open the modal using ID.showModal() method -->
-    <button class="btn" onclick="my_modal_1.showModal()">open modal</button>
-    <dialog id="my_modal_1" class="modal">
-      <div class="modal-box">
-        <h3 class="text-lg font-bold">Hello!</h3>
-        <p class="py-4">Press ESC key or click the button below to close</p>
-        <div class="modal-action">
-          <form method="dialog">
-            <!-- if there is a button in form, it will close the modal -->
-            <button class="btn">Close</button>
-          </form>
+    <main class="flex h-screen w-screen flex-col items-center justify-center">
+      <!-- Title -->
+      <div class="text-center">
+        <h1 class="text-6xl">Three.Js Course</h1>
+        <p class="py-2 text-lg">Choirir la formation à suivre</p>
+      </div>
+      <!-- Cards -->
+      <div class="mt-4 flex flex-wrap items-center justify-center gap-4">
+        <!-- Card three.Js journey -->
+        <div
+          class="card glass card-compact max-w-sm bg-base-100 shadow-xl transition hover:scale-105"
+        >
+          <figure>
+            <video
+              src="/src/assets/img/threeJsJourney.mp4"
+              alt="Three.js Journey"
+              type="video/mp4"
+              autoplay
+              loop
+            ></video>
+          </figure>
+          <div class="card-body">
+            <h2 class="card-title">Three.js Journey</h2>
+            <p>by Bruno Simon</p>
+            <div class="card-actions justify-end">
+              <a href="/html/threeJsJourney/03-Basic-scene.html">
+                <button class="btn btn-primary">Commencer</button>
+              </a>
+            </div>
+          </div>
+        </div>
+        <!-- Card Discover Three.Js book -->
+        <div
+          class="card-compact card glass max-w-sm bg-base-100 shadow-xl transition hover:scale-105"
+        >
+          <figure>
+            <video
+              src="/src/assets/img/threeJsJourney.mp4"
+              alt="Three.js Journey"
+              type="video/mp4"
+              autoplay
+              loop
+            ></video>
+          </figure>
+          <div class="card-body">
+            <h2 class="card-title">Discover Three.Js Book</h2>
+            <p>by Lewy Blue</p>
+            <div class="card-actions justify-end">
+              <button class="btn btn-primary">Commencer</button>
+            </div>
+          </div>
         </div>
       </div>
-    </dialog>
-    <div class="alert alert-info">
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        class="h-6 w-6 shrink-0 stroke-current"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-        ></path>
-      </svg>
-      <span>New software update available.</span>
-    </div>
+    </main>
   </body>
 </html>

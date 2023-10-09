@@ -30,7 +30,7 @@ const addLessonLink = (link: string) => {
 const templateItemList = ({ title, link, done }: Lesson) => `
           <a href="${link}">
                 ${title}
-            <span class="text-green-500 ${!done ? "" : "hidden"}">
+            <span class="text-green-500 ${done ? "" : "hidden"}">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"

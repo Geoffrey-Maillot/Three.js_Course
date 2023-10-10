@@ -9,7 +9,7 @@ export const discoveryThreeJsLessons: Array<Lesson> = [
   {
     title: "1.3 - Introducing the world app",
     link: "/html/discoverThreeJsBook/1.3.html",
-    done: false,
+    done: true,
   },
   {
     title: "1.4 - Physically based rendering and lighting",

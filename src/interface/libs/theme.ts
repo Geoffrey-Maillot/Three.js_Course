@@ -1,1 +1,1 @@
-export type Theme = "light" | "dracula";
+export type Theme = "pastel" | "dracula";

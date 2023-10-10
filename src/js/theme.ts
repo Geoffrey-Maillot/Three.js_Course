@@ -29,13 +29,13 @@ const init = () => {
     "modify-theme",
   ) as HTMLInputElement;
 
-  checkboxTheme.checked = theme === "light";
+  checkboxTheme.checked = theme === "pastel";
 
   checkboxTheme.addEventListener("click", (e: Event) => {
     console.dir(e.target);
     if (checkboxTheme.checked) {
-      addThemeLocalStorage("light");
-      applyTheme("light");
+      addThemeLocalStorage("pastel");
+      applyTheme("pastel");
     } else {
       addThemeLocalStorage("dracula");
       applyTheme("dracula");

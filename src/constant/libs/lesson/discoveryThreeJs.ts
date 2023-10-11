@@ -14,7 +14,7 @@ export const discoveryThreeJsLessons: Array<Lesson> = [
   {
     title: "1.4 - Physically based rendering and lighting",
     link: "/html/discoverThreeJsBook/1.4.html",
-    done: false,
+    done: true,
   },
   {
     title: "1.5 - Transformation and coordinate systems",

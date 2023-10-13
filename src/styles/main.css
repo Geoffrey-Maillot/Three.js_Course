@@ -4,3 +4,12 @@
 svg {
   padding: 0 !important;
 }
+
+.card {
+  //transform: perspective(1px) translateZ(0);
+  will-change: transform;
+  //-webkit-font-smoothinccg: subpixel-antialiased;
+}
+
+.card p {
+}

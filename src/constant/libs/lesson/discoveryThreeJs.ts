@@ -19,12 +19,12 @@ export const discoveryThreeJsLessons: Array<Lesson> = [
   {
     title: "1.5 - Transformation and coordinate systems",
     link: "/html/discoverThreeJsBook/1.5.html",
-    done: false,
+    done: true,
   },
   {
     title: "1.6 - Making our scenes responsive (and also dealing with jaggies)",
     link: "/html/discoverThreeJsBook/1.6.html",
-    done: false,
+    done: true,
   },
   {
     title: "1.7 - The animation loop",

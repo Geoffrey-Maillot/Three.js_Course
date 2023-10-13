@@ -33,7 +33,12 @@ class World {
 
     this.scene.add(basicCube, standartCubeScale, standartCubeRotation, light);
 
-    new Resizer(container, this.camera, this.renderer);
+    const resizer = new Resizer(container, this.camera, this.renderer);
+
+    // scene must be rerender when screen is resized
+    resizer.onResize = () => {
+      this.render();
+    };
   }
 
   // Render the scene

@@ -1,4 +1,4 @@
-import { WebGLRenderer } from "three";
+import { PerspectiveCamera, WebGLRenderer } from "three";
 
 function createRenderer() {
   return new WebGLRenderer({ antialias: true });

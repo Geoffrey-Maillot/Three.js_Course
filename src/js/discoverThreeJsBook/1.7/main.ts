@@ -17,10 +17,22 @@ initPage({
  */
 import { World } from "./world/World";
 
+const startStopWorld = (start: boolean, world: World) => {
+  start ? world.start() : world.stop();
+};
+
 // Create in
 function init() {
   // Get the container element
   const container = document.getElementById("app") as HTMLDivElement;
+  const inputElement = document.getElementById(
+    "animation-all",
+  ) as HTMLInputElement;
+
+  inputElement.addEventListener("change", (e) => {
+    const checked = (e.target as HTMLInputElement).checked;
+    startStopWorld(checked, world);
+  });
 
   // Create instante of the World app
   const world = new World(container);

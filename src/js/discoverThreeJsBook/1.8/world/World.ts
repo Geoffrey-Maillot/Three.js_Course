@@ -3,8 +3,6 @@ import { createScene } from "./components/scene";
 import { createLights } from "./components/light";
 
 import { createCubeRotate } from "./components/cubeRotate";
-import { createCubeSCale } from "./components/cubeScale";
-import { createCubeTranslate } from "./components/cubeTranslate";
 
 import { createRenderer } from "./systems/renderer";
 import { Resizer } from "./systems/Resizer";
@@ -25,12 +23,10 @@ class World {
     container.append(this.renderer.domElement);
 
     const { cubeRotate } = createCubeRotate(this.loop.updatables);
-    const { cubeTranslate } = createCubeTranslate(this.loop.updatables);
-    const { cubeScale } = createCubeSCale(this.loop.updatables);
 
     const light = createLights();
 
-    this.scene.add(cubeRotate, cubeTranslate, cubeScale, light);
+    this.scene.add(cubeRotate, light);
 
     new Resizer(container, this.camera, this.renderer);
   }

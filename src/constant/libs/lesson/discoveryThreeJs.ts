@@ -29,7 +29,7 @@ export const discoveryThreeJsLessons: Array<Lesson> = [
   {
     title: "1.7 - The animation loop",
     link: "/html/discoverThreeJsBook/1.7.html",
-    done: false,
+    done: true,
   },
   {
     title: "1.8 - A brief introduction to texture mapping",

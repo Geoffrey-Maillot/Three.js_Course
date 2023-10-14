@@ -122,8 +122,57 @@
     <!-- Canva -->
     <div
       id="app"
-      class="flex h-[calc(100vh_-_64px)] items-center justify-center"
-    ></div>
+      class="relative flex h-[calc(100vh_-_64px)] items-center justify-center"
+    >
+      <!-- Controle -->
+
+      <div class="top absolute end-0 top-0 flex flex-col">
+        <div class="form-control w-36">
+          <label class="label cursor-pointer">
+            <span class="label-text">All animation</span>
+            <input
+              id="animation-all"
+              type="checkbox"
+              class="toggle toggle-primary"
+              checked
+            />
+          </label>
+        </div>
+        <div class="form-control w-36">
+          <label class="label cursor-pointer">
+            <span class="label-text">Translate</span>
+            <input
+              id="animation-translate"
+              type="checkbox"
+              class="toggle toggle-info"
+              checked
+            />
+          </label>
+        </div>
+        <div class="form-control w-36">
+          <label class="label cursor-pointer">
+            <span class="label-text">Rotate</span>
+            <input
+              id="animation-rotate"
+              type="checkbox"
+              class="toggle toggle-secondary"
+              checked
+            />
+          </label>
+        </div>
+        <div class="form-control w-36">
+          <label class="label cursor-pointer">
+            <span class="label-text">Scale</span>
+            <input
+              id="animation-scale"
+              type="checkbox"
+              class="toggle toggle-accent"
+              checked
+            />
+          </label>
+        </div>
+      </div>
+    </div>
 
     <!-- Side menu -->
     <div class="drawer">

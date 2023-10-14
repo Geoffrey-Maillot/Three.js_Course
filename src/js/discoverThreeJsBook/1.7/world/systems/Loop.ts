@@ -1,10 +1,12 @@
 import { Clock, PerspectiveCamera, Scene, WebGLRenderer } from "three";
 
+const clock = new Clock();
+
 class Loop {
   private camera;
   private scene;
   private renderer;
-  public updatables: Array<() => void> = [];
+  public updatables: Array<(delta: number) => void> = [];
 
   constructor(
     camera: PerspectiveCamera,
@@ -29,7 +31,9 @@ class Loop {
   }
 
   tick() {
-    this.updatables.forEach((tick) => tick());
+    const delta = clock.getDelta();
+
+    this.updatables.forEach((tick) => tick(delta));
   }
 }
 

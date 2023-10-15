@@ -34,7 +34,7 @@ export const discoveryThreeJsLessons: Array<Lesson> = [
   {
     title: "1.8 - A brief introduction to texture mapping",
     link: "/html/discoverThreeJsBook/1.8.html",
-    done: false,
+    done: true,
   },
   {
     title: "1.9 - Extends Three.js with a camera controls plugin",

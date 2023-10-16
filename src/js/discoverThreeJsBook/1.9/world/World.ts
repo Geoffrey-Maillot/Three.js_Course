@@ -1,4 +1,10 @@
-import { PerspectiveCamera, Scene, WebGLRenderer, Mesh } from "three";
+import {
+  PerspectiveCamera,
+  Scene,
+  WebGLRenderer,
+  Mesh,
+  Raycaster,
+} from "three";
 
 import { createCamera } from "./components/camera";
 import { createScene } from "./components/scene";
@@ -18,7 +24,6 @@ class World {
   private renderer: WebGLRenderer;
   private scene: Scene;
   private loop: Loop;
-  private targetMesh: Mesh;
 
   // 1. Create instance of the world app
   constructor(container: HTMLDivElement) {
@@ -37,14 +42,18 @@ class World {
     const light = createLights();
 
     // En instanciant le Control la camera est maintenant géré par celui ci
-    createControls(this.camera, this.renderer.domElement, this.loop.updatables);
+    const { setTarget } = createControls(
+      this.camera,
+      this.renderer.domElement,
+      this.loop.updatables,
+    );
 
     this.scene.add(cube, cube2, light);
 
     new Resizer(container, this.camera, this.renderer);
 
     //create raycaster
-    this.targetMesh = createRaycaster(this.camera, this.scene);
+    createRaycaster(this.camera, this.scene, setTarget);
   }
 
   // Render the scene

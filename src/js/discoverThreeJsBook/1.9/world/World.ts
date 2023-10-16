@@ -1,22 +1,25 @@
+import { PerspectiveCamera, Scene, WebGLRenderer, Mesh } from "three";
+
 import { createCamera } from "./components/camera";
 import { createScene } from "./components/scene";
 import { createLights } from "./components/light";
 
-import { createCubeRotate2 } from "./components/cubeRotate2";
-import { createCubeRotate3 } from "./components/cubeRotate3";
-import { createCubeRotate } from "./components/cubeRotate";
-import { createSphere } from "./components/sphere";
-import { createCone } from "./components/cone";
+import { createCube } from "./components/cube";
+import { createCube2 } from "./components/cube2";
 
 import { createRenderer } from "./systems/renderer";
 import { Resizer } from "./systems/Resizer";
 import { Loop } from "./systems/Loop";
+import { createControls } from "./systems/controls";
+import { createRaycaster } from "./systems/raycaster";
 
 class World {
-  private camera;
-  private renderer;
-  private scene;
-  private loop;
+  private camera: PerspectiveCamera;
+  private renderer: WebGLRenderer;
+  private scene: Scene;
+  private loop: Loop;
+  private targetMesh: Mesh;
+
   // 1. Create instance of the world app
   constructor(container: HTMLDivElement) {
     this.camera = createCamera();
@@ -26,17 +29,22 @@ class World {
 
     container.append(this.renderer.domElement);
 
-    const { cubeRotate } = createCubeRotate(this.loop.updatables);
-    const { cubeRotate2 } = createCubeRotate2(this.loop.updatables);
-    const { cubeRotate3 } = createCubeRotate3(this.loop.updatables);
-    const { sphere } = createSphere(this.loop.updatables);
-    const { cone } = createCone(this.loop.updatables);
+    // Meshs
+    const { cube } = createCube(this.loop.updatables);
+    const { cube2 } = createCube2(this.loop.updatables);
 
+    // Light
     const light = createLights();
 
-    this.scene.add(cubeRotate, cubeRotate2, cubeRotate3, sphere, cone, light);
+    // En instanciant le Control la camera est maintenant géré par celui ci
+    createControls(this.camera, this.renderer.domElement, this.loop.updatables);
+
+    this.scene.add(cube, cube2, light);
 
     new Resizer(container, this.camera, this.renderer);
+
+    //create raycaster
+    this.targetMesh = createRaycaster(this.camera, this.scene);
   }
 
   // Render the scene

@@ -16,22 +16,7 @@ export function createControls(
   //controls.enableDamping = true;
 
   const tick = () => {
-    console.log({ target, camera: camera.position });
-    if (target === camera.position) {
-      removeTickUpdatePosition();
-    }
     controls.update();
-  };
-
-  const updatePosition = () => {
-    camera.position.lerp(target, 0.01);
-    controls.target.copy(camera.position);
-  };
-
-  const removeTickUpdatePosition = () => {
-    const i = updatables.findIndex((t) => t === updatePosition);
-    const _updatables = updatables.splice(i, 1);
-    updatables = _updatables;
   };
 
   const setTarget = (targetMesh: Mesh) => {
@@ -41,7 +26,6 @@ export function createControls(
       20,
     );
     target = newPosition;
-    updatables.push(updatePosition);
   };
 
   updatables.push(tick);

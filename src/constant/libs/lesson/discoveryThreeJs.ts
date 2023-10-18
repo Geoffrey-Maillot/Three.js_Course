@@ -39,7 +39,7 @@ export const discoveryThreeJsLessons: Array<Lesson> = [
   {
     title: "1.9 - Extends Three.js with a camera controls plugin",
     link: "/html/discoverThreeJsBook/1.9.html",
-    done: false,
+    done: true,
   },
   {
     title: "1.10 - Ambient lighting : Illumination from every direction",

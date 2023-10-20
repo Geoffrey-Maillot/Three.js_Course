@@ -44,12 +44,12 @@ export const discoveryThreeJsLessons: Array<Lesson> = [
   {
     title: "1.10 - Ambient lighting : Illumination from every direction",
     link: "/html/discoverThreeJsBook/1.10.html",
-    done: false,
+    done: true,
   },
   {
     title: "1.11 - Organizing your scenes",
     link: "/html/discoverThreeJsBook/1.11.html",
-    done: false,
+    done: true,
   },
   {
     title: "1.12 - The built-in geometries",

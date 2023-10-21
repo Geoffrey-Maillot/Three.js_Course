@@ -29,7 +29,7 @@ class World {
 
     container.append(this.renderer.domElement);
 
-    const train = new Train();
+    const train = new Train(this.loop.updatables);
 
     // create helpers
     const axeHelper = createAxesHelper();

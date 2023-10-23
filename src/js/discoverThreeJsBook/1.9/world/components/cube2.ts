@@ -7,7 +7,7 @@ import {
 } from "three";
 
 // import image
-import textureImage from "../../../../../assets/textures/uv-test-bw.png";
+import textureImage from "../../../assets/textures/uv-test-bw.png";
 
 const createMaterial = () => {
   // create a texture loader.

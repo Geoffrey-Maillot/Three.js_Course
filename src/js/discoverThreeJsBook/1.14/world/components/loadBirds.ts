@@ -5,9 +5,9 @@ export async function loadBirds() {
   const loader = new GLTFLoader();
 
   const [parrotData, flamingoData, storkData] = await Promise.all([
-    loader.loadAsync("/src/assets/models/Parrot.glb"),
-    loader.loadAsync("/src/assets/models/Flamingo.glb"),
-    loader.loadAsync("/src/assets/models/Stork.glb"),
+    loader.loadAsync("/src/js/discoverThreeJsBook/assets/models/Parrot.glb"),
+    loader.loadAsync("/src/js/discoverThreeJsBook/assets/models/Flamingo.glb"),
+    loader.loadAsync("/src/js/discoverThreeJsBook/assets/models/Stork.glb"),
   ]);
 
   const parrot = setupModel(parrotData);

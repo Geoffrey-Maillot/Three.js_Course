@@ -4,11 +4,10 @@ import {
   MeshStandardMaterial,
   MathUtils,
   TextureLoader,
-  Vector2,
 } from "three";
 // import image
-import textureImage from "../../../../../assets/textures/uv-test-bw.png";
-import textureImage2 from "../../../../../assets/textures/uv-test-col.png";
+import textureImage from "../../../assets/textures/uv-test-bw.png";
+import textureImage2 from "../../../assets/textures/uv-test-col.png";
 
 const createMaterial = () => {
   // create a texture loader.

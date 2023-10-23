@@ -54,12 +54,12 @@ export const discoveryThreeJsLessons: Array<Lesson> = [
   {
     title: "1.12 - The built-in geometries",
     link: "/html/discoverThreeJsBook/1.12.html",
-    done: false,
+    done: true,
   },
   {
     title: "1.13 - Load 3D Models in glTF Format",
     link: "/html/discoverThreeJsBook/1.13.html",
-    done: false,
+    done: true,
   },
   {
     title: "1.14 - The Three.Js animation system",

@@ -26,7 +26,7 @@
   </head>
   <body>
     <header class="navbar flex gap-4 bg-base-200">
-      <label class="swap-rotate btn btn-circle swap" for="my-drawer">
+      <label class="btn btn-circle swap swap-rotate" for="my-drawer">
         <!-- this hidden checkbox controls the state -->
         <input type="checkbox" />
 
@@ -122,9 +122,14 @@
     <!-- Canva -->
     <div
       id="app"
-      class="flex h-[calc(100vh_-_64px)] items-center justify-center"
+      class="relative flex h-[calc(100vh_-_64px)] items-center justify-center"
     >
-      <canvas class="webgl"></canvas>
+      <div class="absolute end-4 top-4">
+        <button id="btn-switch" class="btn btn-primary">
+          Changer la cible
+        </button>
+        <button id="btn-cam" class="btn btn-primary">Voir la scene</button>
+      </div>
     </div>
 
     <!-- Side menu -->

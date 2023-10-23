@@ -1,4 +1,4 @@
-import { Mesh, PerspectiveCamera, Vector3 } from "three";
+import { PerspectiveCamera } from "three";
 
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
@@ -11,12 +11,14 @@ export function createControls(
   // damping and auto rotation require
   // the controls to be updated each frame
 
-  controls.autoRotate = true;
-  controls.enableDamping = true;
+  //controls.autoRotate = true;
+  //controls.enableDamping = true;
 
-  const tick = () => controls.update();
+  const tick = () => {
+    controls.update();
+  };
 
   updatables.push(tick);
 
-  return { controls };
+  return controls;
 }

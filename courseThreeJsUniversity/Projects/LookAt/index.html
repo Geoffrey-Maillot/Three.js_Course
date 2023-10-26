@@ -1,0 +1,527 @@
+<head>
+
+	<script src="../js/stats.min.js"></script>
+	<meta  name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0' />
+	<style>
+		body { margin: 0; touch-action: none;}
+		canvas { width: 100%; height: 100% ; touch-action: none;}
+	</style>
+
+	<script type="importmap">
+      {
+        "imports": {
+          "three": "../js/build/three.module.js"
+        }
+      }
+  </script>
+
+  <script  type="module">
+
+    import * as THREE from 'three';
+		import { MTLLoader } from '../js/examples/jsm/loaders/MTLLoader.js';
+		import { OBJLoader } from '../js/examples/jsm/loaders/OBJLoader.js';
+		import { OrbitControls } from '../js/examples/jsm/controls/OrbitControls.js';
+		import { Sky } from '../js/examples/jsm/objects/Sky.js';
+		import { GLTFLoader } from '../js/examples/jsm/loaders/GLTFLoader.js';
+
+		import * as SkeletonUtils from '../js/examples/jsm/utils/SkeletonUtils.js';
+
+
+
+
+		/*
+		* 	--------------------------------------------------------------------------------
+		*
+		*	-------------------------------- GLOBAL VARIABLES --------------------------------
+		*
+		*	--------------------------------------------------------------------------------
+		*/
+
+		// Basic Threejs variables
+		var scene;
+		var camera;
+		var renderer;
+		var clock;
+
+		// Boolean - True if every 3D object is loaded and ready to use
+		var is_Loaded 			= false;
+
+		// Game objs
+		var plant_cube 			= undefined; 		// ThreeJS Mesh	- CUBE WITH PLANTS
+		var tree_cube 			= undefined; 		// ThreeJS Mesh	- CUBE WITH A TREE
+		var basic_cube 			= undefined; 		// ThreeJS Mesh	- SIMPLE CUBE
+
+		var fence_cube			= undefined;		// ThreeJS Mesh
+		var fence_seamless_cube = undefined; 		// ThreeJS Mesh
+		var fence_angle_cube 	= undefined; 		// ThreeJS Mesh
+
+		var rabbit;
+		var carrot;
+
+		var rabbitList = [];
+
+		// Performance stats
+		var stats;
+
+		//SKY - variables used with Sky Shader
+		var sky, sun;
+
+		/*
+		* 	##################
+		*
+		*	 	FUNCTION LoadPlayer_and_NPC()
+		*		This function is used to load player Girl.glb 3D model into a Threejs mesh - stored in a global variable.
+		*		Called in init() function
+		*
+		*		This 3D object is a .glb file - animated model
+		*		The animations were exported from Blender directly into the model, so we can load the animations too.
+		*
+		*	##################
+		*/
+		function LoadPlayer_and_NPC()
+		{
+			/*
+			*
+			*	We are using GLTFLoader to load the Rabbit.glb animated model
+			*
+			*/
+			var loader = new GLTFLoader();
+				loader.load( '../Assets/Rabbit/Rabbit.glb', function ( gltf )
+				{
+						rabbit = gltf.scene;
+
+						//scene.add(rabbit);
+				});
+		}
+
+		/*
+		* 	##################
+		*
+		*	 	FUNCTION LOADCUBES()
+		*		This function is used to load all .OBJ 3D models into Threejs mesh global variables.
+		*		Called in init() function
+		*
+		*		These 3D objects are .obj + .mtl files - static and non animated 3D objects
+		*
+		*	##################
+		*/
+		function LoadCubes()
+		{
+			var mtlLoader = new MTLLoader();
+
+			mtlLoader.load("../Assets/plant_block" + '.mtl', function(materials)
+			{
+				materials.preload();
+				var objLoader = new OBJLoader();
+				objLoader.setMaterials(materials);
+				objLoader.load("../Assets/plant_block" + '.obj', function(object)
+				{
+					plant_cube = object; // plant_cube global var is now set
+				});
+			});
+
+			mtlLoader.load("../Assets/tree_block" + '.mtl', function(materials)
+			{
+				materials.preload();
+				var objLoader = new OBJLoader();
+				objLoader.setMaterials(materials);
+				objLoader.load("../Assets/tree_block" + '.obj', function(object)
+				{
+					tree_cube = object; // tree_cube global var is now set
+				});
+			});
+
+			mtlLoader.load("../Assets/basic_block" + '.mtl', function(materials)
+			{
+				materials.preload();
+				var objLoader = new OBJLoader();
+				objLoader.setMaterials(materials);
+				objLoader.load("../Assets/basic_block" + '.obj', function(object)
+				{
+					basic_cube = object; // basic_cube global var is now set
+				});
+			});
+
+			mtlLoader.load("../Assets/fence_block" + '.mtl', function(materials)
+			{
+				materials.preload();
+				var objLoader = new OBJLoader();
+				objLoader.setMaterials(materials);
+				objLoader.load("../Assets/fence_block" + '.obj', function(object)
+				{
+					fence_cube = object;  // fence_cube global var is now set
+				});
+			});
+
+			mtlLoader.load("../Assets/fence_seamless_block" + '.mtl', function(materials)
+			{
+				materials.preload();
+				var objLoader = new OBJLoader();
+				objLoader.setMaterials(materials);
+				objLoader.load("../Assets/fence_seamless_block" + '.obj', function(object)
+				{
+					fence_seamless_cube = object;  // fence_seamless_cube global var is now set
+				});
+			});
+
+			mtlLoader.load("../Assets/fence_angle_block" + '.mtl', function(materials)
+			{
+				materials.preload();
+				var objLoader = new OBJLoader();
+				objLoader.setMaterials(materials);
+				objLoader.load("../Assets/fence_angle_block" + '.obj', function(object)
+				{
+					fence_angle_cube = object;  // fence_angle_cube global var is now set
+				});
+			});
+
+			mtlLoader.load("../Assets/Carrot/Carrot" + '.mtl', function(materials)
+			{
+				materials.preload();
+				var objLoader = new OBJLoader();
+				objLoader.setMaterials(materials);
+				objLoader.load("../Assets/Carrot/Carrot" + '.obj', function(object)
+				{
+					carrot = object;
+					carrot.scale.set(2,2,2);
+					scene.add(carrot);
+				});
+			});
+
+		}
+
+		/*
+		* 	##################
+		*
+		*	 	FUNCTION INITSKY()
+		*		This function is taken from official ThreeJS Sky shader example.
+		*		This function in creating the beautiful sky color gradient shader + sun
+		*
+		*	##################
+		*/
+		function initSky()
+		{
+			// Add Sky
+			sky = new Sky();
+			sky.scale.setScalar( 450000 );
+			scene.add( sky );
+
+			sun = new THREE.Vector3();
+
+			// SKY OPTIONS
+			const effectController = {turbidity: 10,rayleigh: 3,mieCoefficient: 0.005,mieDirectionalG: 0.7,elevation: 2,azimuth: 45,exposure: renderer.toneMappingExposure};
+
+			const uniforms = sky.material.uniforms;
+			uniforms[ 'turbidity' ].value = effectController.turbidity;
+			uniforms[ 'rayleigh' ].value = effectController.rayleigh;
+			uniforms[ 'mieCoefficient' ].value = effectController.mieCoefficient;
+			uniforms[ 'mieDirectionalG' ].value = effectController.mieDirectionalG;
+
+			const phi = THREE.MathUtils.degToRad( 90 - effectController.elevation );
+			const theta = THREE.MathUtils.degToRad( effectController.azimuth );
+
+			sun.setFromSphericalCoords( 1, phi, theta );
+
+			uniforms[ 'sunPosition' ].value.copy( sun );
+
+			renderer.toneMappingExposure = effectController.exposure;
+			renderer.render( scene, camera );
+		}
+
+		/*
+		* 	##################
+		*
+		*	 	FUNCTION INIT()
+		*		This function is the entry point of our javascript application.
+		*		This function in creating all the basic settings like scene, camera, renderer.
+		*		This function is calling all the loading functions, and defining the main render loop.
+		*
+		*	##################
+		*/
+		function init()
+		{
+
+			/*
+			*
+			*	We are defining the main engine variables.
+			*	clock - to track elapsed time
+			*	scene - where 3D objects are diplayed
+			*	renderer - the threejs 3D display engine
+			*	controls - for camera controls
+			*	lights - to light up our scene
+			*
+			*
+			*	Calling the 3D models loading functions, events, and starting the render loop.
+			*
+			*/
+
+			clock = new THREE.Clock();
+			scene = new THREE.Scene();
+
+			// ---------------- RENDERER ----------------
+
+			renderer = new THREE.WebGLRenderer( { antialias : true } );
+			renderer.setPixelRatio( window.devicePixelRatio  );
+			renderer.setSize( window.innerWidth, window.innerHeight );
+			renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
+			document.body.appendChild( renderer.domElement ); // we add the HTML element to the HTML page
+
+			// ---------------- CAMERA ----------------
+
+			camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 10000 );
+			camera.position.set( -5, 5, -5 );
+			camera.lookAt(new THREE.Vector3(0,0,0));
+			scene.add( camera );
+
+			// ---------------- CONTROLS ----------------
+
+			// OrbitControls is used for the basic camera controls.
+			const controls = new OrbitControls( camera, renderer.domElement );
+			controls.update();
+
+			// ---------------- WHITE GRID HELPER ----------------
+
+			var helper = new THREE.GridHelper( 10, 2, 0xffffff, 0xffffff );
+			scene.add( helper );
+
+			// ---------------- LIGHTS ----------------
+
+			var ambientLight = new THREE.AmbientLight( 0xcccccc, 1 );
+			scene.add( ambientLight );
+
+			const directionalLight = new THREE.DirectionalLight( 0xffffff, 2 );
+			directionalLight.position.set( - 1, 1, 1 );
+			scene.add( directionalLight );
+
+			// ---------------- CALLING LOADING AND INIT FUNCTIONS ----------------
+
+			LoadCubes();
+			LoadPlayer_and_NPC();
+			initSky();
+
+			// ---------------- PERFORMANCE STATS PLUGIN ----------------
+
+			stats = new Stats();
+			stats.showPanel( 0 ); // 0: fps, 1: ms, 2: mb, 3+: custom
+			document.body.appendChild( stats.dom );
+
+			// ---------------- EVENTS ----------------
+
+			window.addEventListener( 'resize', onWindowResize, false );
+
+
+			 // ---------------- STARTING THE GAME MAIN LOOP ----------------
+
+			render();
+		}
+
+		/*
+		* 	##################
+		*
+		*	 	FUNCTION CheckLoaded()
+		*		This function is only used to check if all 3D models are loaded.
+		*		We are simply checking if some global variables are valid.
+		*
+		*		Return true if everything is loaded and ready to use
+		*		Return false if at least something is not loaded and not ready to use yet
+		*
+		*	##################
+		*/
+		function CheckLoaded()
+		{
+				if(fence_cube == undefined)
+				{
+					return false;
+				}
+
+				if(fence_angle_cube == undefined)
+				{
+					return false;
+				}
+
+				if(fence_seamless_cube == undefined)
+				{
+					return false;
+				}
+
+				if(tree_cube == undefined)
+				{
+					return false;
+				}
+
+				if(plant_cube == undefined)
+				{
+					return false;
+				}
+
+				if(basic_cube == undefined)
+				{
+					return false;
+				}
+
+				if(rabbit == undefined)
+				{
+					return false;
+				}
+
+				if(carrot == undefined)
+				{
+					return false;
+				}
+
+
+				return true;
+		}
+
+		/*
+		* 	##################
+		*
+		*	 	FUNCTION RENDER()
+		*		This function is the main loop of our ThreeJS application.
+		*		This function is used for all the works needed to be done every tick.
+		*
+		*
+		*	##################
+		*/
+		function render()
+		{
+			stats.begin(); //performance stats
+
+			var delta = clock.getDelta(); //get delta time between two frames
+
+			/*
+			*
+			*	Boolean "is_Loaded" is used to check if everything is ready to start the application.
+			*	By default it's value if false.
+			*	Each main loop tick , we are checking if everyrthing is loaded, then if true, lauching InitMap() function.
+			*	When InitMap() function is launched, "is_Loaded" is set to true - so we don't reset the map each loop tick.
+			*
+			*	This boolean is basically used to execute some action only once - when the 3D models are loaded, like the map init.
+			*/
+
+			if( is_Loaded == false)
+			{
+				if( CheckLoaded())
+				{
+					// As explained, this is exeuted only once !
+
+					is_Loaded = true;
+
+					// InitMap contains all the tasks to execute only once - when the 3D models are loaded
+					InitMap();
+				}
+			}
+			else // When the ressources are already loaded, the else case is executed at every loop tick
+			{
+				// Tick tasks are there
+
+				carrot.position.x = Math.sin( clock.elapsedTime ) * 5;
+				carrot.position.z = Math.cos( clock.elapsedTime ) * 5;
+				carrot.position.y = Math.cos( clock.elapsedTime ) * 2 + 4;
+
+				for(var i = 0 ; i < rabbitList.length ; i++)
+				{
+						rabbitList[i].lookAt( carrot.position );
+				}
+
+			}
+
+			renderer.render( scene, camera ); 	// We are rendering the 3D world
+			stats.end();					 	// stats , fps ratio ect...
+			requestAnimationFrame( render );	// we are calling render() again,  to loop
+		}
+
+		/*
+		* 	##################
+		*
+		*	 	FUNCTION INITMAP()
+		*		InitMap contains all the tasks to execute only once - when the 3D models are loaded
+		*
+		*		1) Add the player to the scene
+		*		2) Build the map with 3D elements
+		*
+		*	##################
+		*/
+		function InitMap()
+		{
+
+			// ---------------- MAP BLOCKS ----------------
+
+			var mapwidth = 30;
+			var step = 2;
+
+			for(var i = 0; i <= mapwidth ; i+=step )
+			{
+				for(var j = 0; j <= mapwidth ; j+=step )
+				{
+
+						if(i == 0 || j == 0 || i == mapwidth || j == mapwidth)
+						{
+								var tmpblock1 = tree_cube.clone();
+								tmpblock1.position.x = i - mapwidth/2 ;
+								tmpblock1.position.z = j - mapwidth/2 ;
+								scene.add( tmpblock1 );
+						}
+						else
+						{
+								var rand = Math.floor(Math.random() * (8 - 1) + 1);
+
+								if( rand == 5 )
+								{
+										var tmpblock1 = plant_cube.clone();
+										tmpblock1.position.x = i - mapwidth/2 ;
+										tmpblock1.position.z = j - mapwidth/2 ;
+										scene.add( tmpblock1 );
+								}
+								else
+								{
+										var tmpblock1 = basic_cube.clone();
+										tmpblock1.position.x = i - mapwidth/2 ;
+										tmpblock1.position.z = j - mapwidth/2 ;
+										scene.add( tmpblock1 );
+								}
+						}
+				}
+			}
+
+			for(var i = 0; i <= 260 ; i+=30 )
+			{
+				for(var j = 9; j <= 12 ; j+=3 )
+				{
+						var tmprabbit = SkeletonUtils.clone( rabbit );
+						tmprabbit.position.x = Math.sin( (i+j) ) * j;
+						tmprabbit.position.z = Math.cos( (i+j) ) * j;
+						tmprabbit.position.y = 1;
+
+						rabbitList.push(tmprabbit);
+						scene.add(tmprabbit);
+				}
+			}
+
+		}
+
+		/*
+		* 	##################
+		*
+		*	 	FUNCTION ONWINDOWRESIZE()
+		*		This function is called when the window is resized, update the camera projection to fit the new size
+		*
+		*	##################
+		*/
+		function onWindowResize()
+		{
+			camera.aspect = window.innerWidth / window.innerHeight;
+			camera.updateProjectionMatrix();
+
+			renderer.setSize( window.innerWidth, window.innerHeight );
+		}
+
+		init();
+
+	</script>
+
+</head>
+
+<body>
+
+</body>

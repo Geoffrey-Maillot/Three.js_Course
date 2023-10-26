@@ -1,0 +1,383 @@
+<head>
+
+	<script src="../js/stats.min.js"></script>
+	<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0' />
+
+	<style>
+		body { margin: 0; touch-action: none;}
+		canvas { width: 100%; height: 100% ; touch-action: none;}
+
+	</style>
+
+
+	<script type="importmap">
+	    {
+	      "imports": {
+	        "three": "../js/build/three.module.js"
+	      }
+	    }
+	</script>
+
+	<script  type="module">
+
+	  import * as THREE from 'three';
+		import { MTLLoader } from '../js/examples/jsm/loaders/MTLLoader.js';
+		import { OBJLoader } from '../js/examples/jsm/loaders/OBJLoader.js';
+		import { Sky } from '../js/examples/jsm/objects/Sky.js';
+		import { OrbitControls } from '../js/examples/jsm/controls/OrbitControls.js';
+
+		/*
+		* 	--------------------------------------------------------------------------------
+		*
+		*	-------------------------------- GLOBAL VARIABLES --------------------------------
+		*
+		*	--------------------------------------------------------------------------------
+		*/
+
+		function vertexShader()
+		{
+		  return `
+				uniform float time;
+				varying vec3 vUv;
+
+				void main()
+				{
+					vUv = position;
+
+					vec3 newpos = vec3( sin(position.y + time)  * position.x, position.y,  sin(position.y + time)* position.z);
+
+					gl_Position = projectionMatrix * modelViewMatrix * vec4( newpos, 1.0);
+
+				}
+		  `
+		}
+
+		function fragmentShader()
+		{
+		  return `
+		      uniform vec3 colorA;
+		      uniform vec3 colorB;
+		      uniform float time;
+
+					varying vec3 vUv;
+
+		      void main()
+					{
+
+							vec3 colorC = vec3(0.5, 0.5, 0.5);
+
+							vec3 pass_one = vec3(mix(colorA, colorB, vUv.y ));
+							vec3 pass_two = vec3( mix(pass_one, colorC, sin(time) ));
+
+					    gl_FragColor = vec4( pass_two , 1.0);
+		      }
+		  `
+		}
+
+		// Basic Threejs variables
+		var scene;
+		var camera;
+		var renderer;
+		var clock;
+
+		// Boolean - True if every 3D object is loaded and ready to use
+		var is_Loaded 			= false;
+
+		// Game objs
+		var monument_model 		= undefined; 	// ThreeJS Mesh	- Monument
+
+		var shadermesh 			= undefined; 	// ThreeJS Mesh	- shadermesh
+
+
+		// Performance stats
+		var stats;
+
+		var uniforms = {}
+
+		//SKY - variables used with Sky Shader
+		var sky, sun;
+
+
+		/*
+		* 	##################
+		*
+		*	 	FUNCTION Load3DFiles()
+		*		This function is used to load 3D models into Threejs meshes - stored in global variables.
+		*		Called in init() function
+		*
+		*		These 3D object are .obj files
+		*
+		*	##################
+		*/
+		function Load3DFiles(cubeVar)
+		{
+			/*
+			*
+			*	We are using OBJLoader + MTLLoader to load the 3D models
+			*
+			*/
+			var mtlLoader = new MTLLoader();
+			var objLoader = new OBJLoader();
+
+			mtlLoader.load("../Assets/monument" + '.mtl', function(materials)
+			{
+				materials.preload();
+				var objLoader = new OBJLoader();
+				objLoader.setMaterials(materials);
+				objLoader.load("../Assets/monument" + '.obj', function(object)
+				{
+					monument_model = object;
+				});
+			});
+
+
+			uniforms.colorA = {type: 'vec3', value: new THREE.Color(0xc0392b)}
+			uniforms.colorB = {type: 'vec3', value: new THREE.Color(0xf1c40f)}
+			uniforms.time = { value: 0.0 }
+			uniforms.mixAmount = { type: "f", value: 0.0 }
+
+			let material =  new THREE.ShaderMaterial({
+		    uniforms: uniforms,
+		    fragmentShader: fragmentShader(),
+		    vertexShader: vertexShader(),
+		  });
+
+
+
+			var boxGeo = new THREE.SphereGeometry(2,64,64);
+			shadermesh = new THREE.Mesh(boxGeo, material);
+
+			shadermesh.position.y = 4;
+
+
+		}
+
+		/*
+		* 	##################
+		*
+		*	 	FUNCTION INITSKY()
+		*		This function is taken from official ThreeJS Sky shader example.
+		*		This function in creating the beautiful sky color gradient shader + sun
+		*
+		*	##################
+		*/
+		function initSky()
+		{
+			// Add Sky
+			sky = new Sky();
+			sky.scale.setScalar( 450000 );
+			scene.add( sky );
+
+			sun = new THREE.Vector3();
+			// SKY OPTIONS
+			const effectController = {turbidity: 10,rayleigh: 3,mieCoefficient: 0.005,mieDirectionalG: 0.7,elevation: 1,azimuth: 45};
+
+			const uniforms = sky.material.uniforms;
+			uniforms[ 'turbidity' ].value = effectController.turbidity;
+			uniforms[ 'rayleigh' ].value = effectController.rayleigh;
+			uniforms[ 'mieCoefficient' ].value = effectController.mieCoefficient;
+			uniforms[ 'mieDirectionalG' ].value = effectController.mieDirectionalG;
+
+			const phi = THREE.MathUtils.degToRad( 90 - effectController.elevation );
+			const theta = THREE.MathUtils.degToRad( effectController.azimuth );
+
+			sun.setFromSphericalCoords( 1, phi, theta );
+
+			uniforms[ 'sunPosition' ].value.copy( sun );
+
+		}
+
+		/*
+		* 	##################
+		*
+		*	 	FUNCTION INIT()
+		*		This function is the entry point of our javascript application.
+		*
+		*	##################
+		*/
+		function init()
+		{
+
+			/*
+			*
+			*	We are defining the main engine variables.
+			*	clock - to track elapsed time
+			*	scene - where 3D objects are diplayed
+			*	renderer - the threejs 3D display engine
+			*	lights - to light up our scene
+			*
+			*	Calling the 3D models loading functions, events, and starting the render loop.
+			*
+			*/
+
+			clock = new THREE.Clock();
+			scene = new THREE.Scene();
+
+			// ---------------- RENDERER ----------------
+
+			renderer = new THREE.WebGLRenderer( { antialias : true } );
+			renderer.setPixelRatio( window.devicePixelRatio  );
+			renderer.setSize( window.innerWidth, window.innerHeight );
+			document.body.appendChild( renderer.domElement );  // we add the HTML element to the HTML page
+
+			// ---------------- CAMERA ----------------
+
+			camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 10000 );
+			camera.position.set( 0, 7, -10 );
+			camera.lookAt(0,4,0);
+			scene.add( camera );
+
+			// ---------------- CONTROLS ----------------
+
+			// OrbitControls is used for the basic camera controls.
+			const controls = new OrbitControls( camera, renderer.domElement );
+			controls.update();
+
+			// ---------------- WHITE GRID HELPER ----------------
+
+			var helper = new THREE.GridHelper( 10, 2, 0xffffff, 0xffffff );
+			scene.add( helper );
+
+			// ---------------- LIGHTS ----------------
+
+			var ambientLight = new THREE.AmbientLight( 0xcccccc, 0.5 );
+			scene.add( ambientLight );
+
+			const directionalLight = new THREE.DirectionalLight( 0xffffff, 1 );
+			directionalLight.position.set(  1, 1, -1 );
+			scene.add( directionalLight );
+
+			const pointLight = new THREE.PointLight( 0xff6666, 3 );
+			directionalLight.position.set(  0, 1, 0 );
+			scene.add( directionalLight );
+
+			// ---------------- CALLING LOADING AND INIT FUNCTIONS ----------------
+
+			Load3DFiles();
+			initSky();
+
+			// ---------------- PERFORMANCE STATS PLUGIN ----------------
+
+			stats = new Stats();
+			stats.showPanel( 0 ); // 0: fps, 1: ms, 2: mb, 3+: custom
+			document.body.appendChild( stats.dom );
+
+			// ---------------- EVENTS ----------------
+
+			window.addEventListener( 'resize', onWindowResize, false );
+
+			// ---------------- STARTING THE GAME MAIN LOOP ----------------
+
+			render();
+		}
+
+		/*
+		* 	##################
+		*
+		*	 	FUNCTION CheckLoaded()
+		*		This function is only used to check if all 3D models are loaded.
+		*
+		*	##################
+		*/
+		function CheckLoaded()
+		{
+			if(monument_model == undefined)
+			{
+				return false;
+			}
+
+			if(shadermesh == undefined)
+			{
+				return false;
+			}
+
+			return true;
+		}
+
+		/*
+		* 	##################
+		*
+		*	 	FUNCTION RENDER()
+		*		This function is the main loop of our ThreeJS application.
+		*		This function is used for all the works needed to be done every game tick.
+		*
+		*	##################
+		*/
+		function render()
+		{
+			stats.begin();  					//performance stats
+
+			var delta = clock.getDelta();  		//get delta time between two frames
+			var elapsed = clock.elapsedTime;  	//get elapsed time
+
+			if( is_Loaded == false)
+			{
+				if( CheckLoaded())
+				{
+					InitMap();
+					is_Loaded = true;
+				}
+			}
+			else
+			{
+				// Game tick tasks are there
+
+				// SHADER
+				uniforms[ 'time' ].value = elapsed;
+				uniforms[ 'mixAmount' ].value = 0.5 * (1.0 + Math.sin(elapsed));
+
+			}
+
+			renderer.render( scene, camera ); 	// We are rendering the 3D world
+			stats.end(); 						// stats , fps ratio ect...
+			requestAnimationFrame( render );	// we are calling render() again,  to loop
+		}
+
+		/*
+		* 	##################
+		*
+		*	 	FUNCTION INITMAP()
+		*		InitMap contains all the tasks to execute only once - when the 3D models are loaded
+		*
+		*		1) Build the map with 3D elements
+		*
+		*	##################
+		*/
+		function InitMap()
+		{
+			// monument
+			var tmpblock1 = monument_model.clone();
+			tmpblock1.position.z = -4;
+			tmpblock1.scale.set(3, 3, 3);
+			tmpblock1.rotation.y = Math.PI;
+			scene.add( tmpblock1 );
+
+			scene.add(shadermesh);
+
+		}
+
+		/*
+		* 	##################
+		*
+		*	 	FUNCTION ONWINDOWRESIZE()
+		*		This function is called when the window is resized, update the camera projection to fit the new size
+		*
+		*	##################
+		*/
+		function onWindowResize()
+		{
+			camera.aspect = window.innerWidth / window.innerHeight;
+			camera.updateProjectionMatrix();
+
+			renderer.setSize( window.innerWidth, window.innerHeight );
+		}
+
+		init();
+
+	</script>
+
+</head>
+
+<body>
+
+</body>

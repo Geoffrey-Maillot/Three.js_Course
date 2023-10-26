@@ -1,0 +1,219 @@
+<head>
+
+	<script src="../js/stats.min.js"></script>
+	<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0' />
+
+	<style>
+		body { margin: 0; touch-action: none;}
+		canvas { width: 100%; height: 100% ; touch-action: none;}
+
+		@font-face
+		{
+		  font-family: roboto-font;
+		  src: url(../fonts/Roboto-Thin.ttf);
+		}
+	</style>
+
+	<script type="importmap">
+	    {
+	      "imports": {
+	        "three": "../js/build/three.module.js"
+	      }
+	    }
+	</script>
+
+	<script  type="module">
+
+	  import * as THREE from 'three';
+
+		import { OrbitControls } from '../js/examples/jsm/controls/OrbitControls.js';
+		import { Sky } from '../js/examples/jsm/objects/Sky.js';
+
+		/*
+		* 	--------------------------------------------------------------------------------
+		*
+		*	-------------------------------- GLOBAL VARIABLES --------------------------------
+		*
+		*	--------------------------------------------------------------------------------
+		*/
+
+		// Basic Threejs variables
+		var scene;
+		var camera;
+		var renderer;
+		var clock;
+
+		var cube 				= undefined;	// ThreeJS Mesh
+
+		// Performance stats
+		var stats;
+
+		//SKY - variables used with Sky Shader
+		var sky, sun;
+
+
+		function initSky()
+		{
+			// Add Sky
+			sky = new Sky();
+			sky.scale.setScalar( 450000 );
+			scene.add( sky );
+
+			sun = new THREE.Vector3();
+			// SKY OPTIONS
+			const effectController = {turbidity: 10,rayleigh: 3,mieCoefficient: 0.005,mieDirectionalG: 0.7,elevation: 2,azimuth: 45,exposure: renderer.toneMappingExposure};
+
+			const uniforms = sky.material.uniforms;
+			uniforms[ 'turbidity' ].value = effectController.turbidity;
+			uniforms[ 'rayleigh' ].value = effectController.rayleigh;
+			uniforms[ 'mieCoefficient' ].value = effectController.mieCoefficient;
+			uniforms[ 'mieDirectionalG' ].value = effectController.mieDirectionalG;
+
+			const phi = THREE.MathUtils.degToRad( 90 - effectController.elevation );
+			const theta = THREE.MathUtils.degToRad( effectController.azimuth );
+
+			sun.setFromSphericalCoords( 1, phi, theta );
+
+			uniforms[ 'sunPosition' ].value.copy( sun );
+
+			renderer.toneMappingExposure = effectController.exposure;
+			renderer.render( scene, camera );
+		}
+
+		function init()
+		{
+
+
+			clock = new THREE.Clock();
+			scene = new THREE.Scene();
+
+			// ---------------- RENDERER ----------------
+
+			renderer = new THREE.WebGLRenderer( { antialias : true } );
+			renderer.setPixelRatio( window.devicePixelRatio  );
+			renderer.setSize( window.innerWidth, window.innerHeight );
+			document.body.appendChild( renderer.domElement );  // we add the HTML element to the HTML page
+
+			// ---------------- CAMERA ----------------
+
+			camera = new THREE.PerspectiveCamera( 55, window.innerWidth / window.innerHeight, 1, 10000 );
+			camera.position.set( 0, 3, -5 );
+			camera.lookAt(new THREE.Vector3(0,0,0));
+			scene.add( camera );
+
+			// ---------------- CAMERA CONTROLS ----------------
+
+			const controls = new OrbitControls( camera, renderer.domElement );
+			controls.update();
+
+			// ---------------- WHITE GRID HELPER ----------------
+
+			var helper = new THREE.GridHelper( 10, 2, 0xffffff, 0xffffff );
+			helper.position.y = -2;
+			scene.add( helper );
+
+			// ---------------- LIGHTS ----------------
+
+			var ambientLight = new THREE.AmbientLight( 0xcccccc, 1.2 );
+			scene.add( ambientLight );
+
+			const directionalLight = new THREE.DirectionalLight( 0xffffff, 1 );
+			directionalLight.position.set( - 1, 1, 1 );
+			scene.add( directionalLight );
+
+			// ---------------- CALLING LOADING AND INIT FUNCTIONS ----------------
+
+			initSky();
+			InitMap();
+
+			// ---------------- PERFORMANCE STATS PLUGIN ----------------
+
+			stats = new Stats();
+			stats.showPanel( 0 ); // 0: fps, 1: ms, 2: mb, 3+: custom
+			document.body.appendChild( stats.dom );
+
+
+			// ---------------- EVENTS ----------------
+
+			window.addEventListener( 'resize', onWindowResize, false );
+
+			// ---------------- STARTING THE GAME MAIN LOOP ----------------
+
+			render();
+		}
+
+
+
+		function render()
+		{
+			stats.begin();						//performance stats
+
+			var delta = clock.getDelta();		//get delta time between two frames
+			var elapsed = clock.elapsedTime;	//get elapsed time
+
+			// ---------------- UPDATING MAIN OBJECTS POSITION  ----------------
+
+			cube.position.y = 0.5 * Math.sin(elapsed);  // floating effect
+			cube.rotation.z += 0.01;
+
+			renderer.render( scene, camera ); 	// We are rendering the 3D world
+			stats.end(); 						// stats , fps ratio ect...
+			requestAnimationFrame( render );	// we are calling render() again,  to loop
+		}
+
+
+		function InitMap()
+		{
+				// ---------------- TEXTURES ----------------
+
+				const loader = new THREE.TextureLoader();
+
+				var objectsize = 4;
+
+				var texture_nearest = loader.load('pixel_art.png');
+				texture_nearest.magFilter = THREE.NearestFilter;
+
+				texture_nearest.wrapS = THREE.RepeatWrapping;
+				texture_nearest.wrapT = THREE.RepeatWrapping;
+				texture_nearest.repeat.set(4, 4);
+
+				const material_nearest = new THREE.MeshLambertMaterial({
+					map: texture_nearest
+				});
+
+				// ---------------- 3D CUBE ----------------
+
+				const geometry = new THREE.BoxGeometry(objectsize, objectsize, objectsize);
+				cube = new THREE.Mesh( geometry, material_nearest );
+				scene.add( cube );
+
+
+		}
+
+		/*
+		* 	##################
+		*
+		*	 	FUNCTION ONWINDOWRESIZE()
+		*		This function is called when the window is resized, update the camera projection to fit the new size
+		*
+		*	##################
+		*/
+		function onWindowResize()
+		{
+			camera.aspect = window.innerWidth / window.innerHeight;
+			camera.updateProjectionMatrix();
+
+			renderer.setSize( window.innerWidth, window.innerHeight );
+		}
+
+		init();
+
+	</script>
+
+</head>
+
+<body>
+
+
+
+</body>

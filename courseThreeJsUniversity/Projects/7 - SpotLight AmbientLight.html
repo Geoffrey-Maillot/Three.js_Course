@@ -1,0 +1,160 @@
+<html>
+  <head>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0' />
+
+    <style>
+    body
+		{
+			margin: 0; touch-action: none;
+			background-image: -webkit-gradient(linear, 0 0, 100% 100%, color-stop(0, #877fa8), color-stop(100%, #f9ae91));
+			background-image: -webkit-linear-gradient(135deg, #877fa8, #f9ae91);
+			background-image: -moz-linear-gradient(45deg, #877fa8, #f9ae91);
+			background-image: -ms-linear-gradient(45deg, #877fa8 0, #f9ae91 100%);
+			background-image: -o-linear-gradient(45deg, #877fa8, #f9ae91);
+			background-image: linear-gradient(135deg, #877fa8, #f9ae91);
+		}
+
+        canvas  { height : 100%; width : 100%; }
+    </style>
+
+    <script type="importmap">
+        {
+          "imports": {
+            "three": "./js/build/three.module.js"
+          }
+        }
+    </script>
+
+    <script  type="module">
+
+      import * as THREE from 'three';
+      import { OrbitControls } from './js/examples/jsm/controls/OrbitControls.js';
+
+      var scene;
+      var renderer;
+      var camera;
+
+      var group;
+      var clock;
+
+      var controls;
+
+      var spotlight;
+      var spotHelper;
+
+      function init()
+      {
+          clock = new THREE.Clock();
+          scene = new THREE.Scene();
+
+          renderer = new THREE.WebGLRenderer({antialias : true, alpha : true});
+          renderer.setPixelRatio(window.devicePixelRatio);
+          renderer.setSize(window.innerWidth, window.innerHeight);
+          renderer.setClearColor(0x2c3e50, 0);
+          renderer.shadowMap.enabled = true;
+          document.body.appendChild(renderer.domElement);
+
+          // ---- CAMERA ----
+
+          camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 40000 );
+          camera.lookAt( new THREE.Vector3(0, 0, 0) );
+          scene.add(camera);
+
+          controls = new OrbitControls( camera, renderer.domElement );
+
+    			controls.minDistance = 400;
+    			controls.maxDistance = 100000;
+    			controls.dampingFactor = 0.05;
+    			controls.enableDamping = true;
+    			controls.maxPolarAngle = Math.PI / 2 - Math.PI / 10;
+    			controls.enablePan = true;
+    			controls.enableRotate = true;
+    			controls.enableZoom = true;
+    			controls.panSpeed = 1;
+    			controls.rotateSpeed = 2;
+    			controls.zoomSpeed = 1;
+
+    			controls.update();
+
+          camera.position.set(0, 1000, 1000);
+
+
+          // --------------------------------
+
+          const planeGeo = new THREE.PlaneGeometry(10000, 10000);
+  				const planeMat = new THREE.MeshPhongMaterial({side: THREE.DoubleSide});
+
+  				const floor = new THREE.Mesh(planeGeo, planeMat);
+          floor.receiveShadow = true;
+  				floor.rotation.x = Math.PI * -0.5;
+  				scene.add(floor);
+
+
+          var ambientLight = new THREE.AmbientLight(0xcccccc, 0.5);
+          scene.add(ambientLight);
+
+          spotlight = new THREE.SpotLight(0xc0392b, 8, 20000, Math.PI / 10);
+          spotlight.position.y = 2000;
+          spotlight.castShadow = true;
+          spotlight.shadowMapWidth = 2048; // default is 512
+          spotlight.shadowMapHeight = 2048; // default is 512
+          scene.add(spotlight);
+
+          scene.add(spotlight.target);
+
+          spotHelper = new THREE.SpotLightHelper(spotlight);
+          scene.add(spotHelper);
+
+          // --------------------------------
+
+          var Geo  = new THREE.TorusKnotGeometry(200, 60, 252, 252, 3, 4);
+          //var Geo  = new THREE.SphereGeometry(600, 32, 32);
+
+          const meshMaterial = new THREE.MeshPhysicalMaterial(
+          {
+              color: 0xffffff,
+              metalness : 0.5,
+              roughness : 1,
+              clearcoat : 1,
+              clearcoatRoughness : 0,
+          });
+
+    			var mesh = new THREE.Mesh( Geo, meshMaterial ) ;
+          mesh.position.y = 400;
+          mesh.castShadow = true;
+    			scene.add( mesh );
+
+
+          render();
+      }
+
+      function render()
+      {
+
+          var delta = clock.getDelta();
+          var elapsed = clock.elapsedTime;
+
+          controls.update();
+
+          spotlight.position.x = Math.sin(elapsed) * 6000;
+          spotlight.position.z = Math.cos(elapsed) * 6000;
+          spotlight.position.y = Math.abs(Math.cos(elapsed / 4) * 6000) + 50;
+
+          //spotlight.lookAt(new THREE.Vector3(0,0,0));
+
+          spotlight.target.position.set(0,0,0);
+
+          spotHelper.update();
+
+
+          renderer.render(scene, camera);
+          requestAnimationFrame(render);
+      }
+
+      init();
+
+    </script>
+  </head>
+
+  <body></body>
+</html>

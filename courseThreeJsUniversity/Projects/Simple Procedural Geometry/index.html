@@ -1,0 +1,119 @@
+<head>
+
+	<script src="../js/stats.min.js"></script>
+
+	<meta name='viewport'  content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0' />
+
+	<style>
+		body { margin: 0; touch-action: none;}
+		canvas { width: 100%; height: 100% ; touch-action: none;}
+
+	</style>
+
+	<script type="importmap">
+	    {
+	      "imports": {
+	        "three": "../js/build/three.module.js"
+	      }
+	    }
+	</script>
+
+	<script  type="module">
+
+	  import * as THREE from 'three';
+
+		/*
+		* 	--------------------------------------------------------------------------------
+		*
+		*	-------------------------------- GLOBAL VARIABLES --------------------------------
+		*
+		*	--------------------------------------------------------------------------------
+		*/
+
+		// Basic Threejs variables
+		var scene;
+		var camera;
+		var renderer;
+
+		/*
+		* 	##################
+		*
+		*	 	FUNCTION createScene()
+		*		This function is used to create the procedural triangle in the scene.
+		*
+		* 	##################
+		*/
+		function createScene()
+		{
+			// ---------------- ### CUSTOM GEOMETRY - TRIANGLE  ### ----------------
+
+			const geometry = new THREE.BufferGeometry();
+
+			// vertices are stored in a Float32Array
+			const vertices = new Float32Array( [
+				1.0, -1.0,  1.0, 	// XYZ of vertice 1
+				 0, 2.0,  1.0,		// XYZ of vertice 2
+				 -1.0,  -1.0,  1.0	// XYZ of vertice 3
+			] );
+
+			// itemSize = 3 because there are 3 values (components) per vertex
+			geometry.setAttribute( 'position', new THREE.BufferAttribute( vertices, 3 ) );
+			const material = new THREE.MeshBasicMaterial( { color: 0xff0000 } );
+			const mesh = new THREE.Mesh( geometry, material );
+
+			scene.add(mesh);
+
+		}
+		/*
+		* 	##################
+		*
+		*	 	FUNCTION INIT()
+		*		This function is the entry point of our javascript application
+		*
+		*	##################
+		*/
+		function init()
+		{
+
+			scene = new THREE.Scene();
+
+			// ---------------- RENDERER ----------------
+
+			renderer = new THREE.WebGLRenderer( { antialias : true } );
+			renderer.setPixelRatio( window.devicePixelRatio  );
+			renderer.setSize( window.innerWidth, window.innerHeight );
+			renderer.setClearColor(0x333333, 1.0);
+			renderer.shadowMap.enabled = true;
+			document.body.appendChild( renderer.domElement );
+
+			// ---------------- ORTHOGRAPHIC CAMERA ----------------
+
+			camera = new THREE.OrthographicCamera( window.innerWidth / - 100, window.innerWidth / 100, window.innerHeight / 100, window.innerHeight / -100, - 300, 500);
+			camera.position.set( 0, 0, 10 );
+			camera.lookAt(new THREE.Vector3(0,0,0));
+			scene.add( camera );
+
+			// ---------------- 3D OBJECTS ----------------
+
+			createScene();
+
+			// ---------------- STARTING THE GAME MAIN LOOP ----------------
+
+			render();
+		}
+
+		//render loop
+		function render()
+		{
+			renderer.render( scene, camera );
+			requestAnimationFrame( render );
+		}
+
+		init();
+
+	</script>
+
+</head>
+
+<body>
+</body>

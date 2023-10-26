@@ -1,0 +1,254 @@
+<html>
+  <head>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0' />
+
+    <style>
+    body
+		{
+			margin: 0; touch-action: none;
+			background-image: -webkit-gradient(linear, 0 0, 100% 100%, color-stop(0, #877fa8), color-stop(100%, #f9ae91));
+			background-image: -webkit-linear-gradient(135deg, #877fa8, #f9ae91);
+			background-image: -moz-linear-gradient(45deg, #877fa8, #f9ae91);
+			background-image: -ms-linear-gradient(45deg, #877fa8 0, #f9ae91 100%);
+			background-image: -o-linear-gradient(45deg, #877fa8, #f9ae91);
+			background-image: linear-gradient(135deg, #877fa8, #f9ae91);
+		}
+
+        canvas  { height : 100%; width : 100%; }
+    </style>
+
+    <script type="importmap">
+        {
+          "imports": {
+            "three": "./js/build/three.module.js"
+          }
+        }
+    </script>
+
+    <script  type="module">
+
+      import * as THREE from 'three';
+      import { OrbitControls } from './js/examples/jsm/controls/OrbitControls.js';
+
+      import { MTLLoader } from './js/examples/jsm/loaders/MTLLoader.js';
+      import { OBJLoader } from './js/examples/jsm/loaders/OBJLoader.js';
+      import { GLTFLoader } from './js/examples/jsm/loaders/GLTFLoader.js';
+      import { ColladaLoader } from './js/examples/jsm/loaders/ColladaLoader.js';
+
+      var scene;
+      var renderer;
+      var camera;
+
+      var group;
+      var clock;
+
+      var controls;
+
+      var MyLight;
+
+      var MyLight_Helper;
+
+
+      function init()
+      {
+          clock = new THREE.Clock();
+          scene = new THREE.Scene();
+
+          renderer = new THREE.WebGLRenderer({antialias : true, alpha : true});
+          renderer.setPixelRatio(window.devicePixelRatio);
+          renderer.setSize(window.innerWidth, window.innerHeight);
+          renderer.setClearColor(0x2c3e50, 0);
+          renderer.shadowMap.enabled = true;
+          document.body.appendChild(renderer.domElement);
+
+
+          // ---- CAMERA ----
+
+          camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 40000 );
+          camera.lookAt( new THREE.Vector3(0, 0, 0) );
+          scene.add(camera);
+
+          // -------- CONTROLS --------
+
+          controls = new OrbitControls( camera, renderer.domElement );
+
+    			controls.minDistance = 400;
+    			controls.maxDistance = 100000;
+    			controls.dampingFactor = 0.05;
+    			controls.enableDamping = true;
+    			controls.maxPolarAngle = Math.PI / 2 - Math.PI / 10;
+    			controls.enablePan = true;
+    			controls.enableRotate = true;
+    			controls.enableZoom = true;
+    			controls.panSpeed = 1;
+    			controls.rotateSpeed = 2;
+    			controls.zoomSpeed = 1;
+
+    			controls.update();
+
+          // ------------------------
+
+          camera.position.set(0, 2000, 5000);
+
+          // --------------------------------
+
+          const planeGeo = new THREE.PlaneGeometry(10000, 10000);
+          const planeMat = new THREE.MeshPhysicalMaterial(
+          {
+              color: 0xffffff,
+              metalness : 0,
+              roughness : 1,
+              clearcoat : 1,
+              clearcoatRoughness : 0,
+              side: THREE.DoubleSide
+          });
+
+  				const floor = new THREE.Mesh(planeGeo, planeMat);
+  				floor.rotation.x = Math.PI * -0.5;
+          floor.receiveShadow = true;
+  				scene.add(floor);
+
+          const directionalLight = new THREE.DirectionalLight( 0xffffff, 0.6 );
+          directionalLight.position.set( - 1, 1, 1 );
+          scene.add( directionalLight );
+
+          var ambientLight = new THREE.AmbientLight(0xcccccc, 0.5);
+          scene.add(ambientLight);
+
+          MyLight = new THREE.SpotLight(0xffffff, 2, 20000, Math.PI / 4);
+          MyLight.position.z = 2000;
+          MyLight.castShadow = true;
+          MyLight.shadow.mapSize.width = 2048; // default is 512
+          MyLight.shadow.mapSize.width = 2048; // default is 512
+          scene.add(MyLight);
+
+
+          // --------------------------------
+
+          var BlockGeo = new THREE.BoxGeometry(500, 1000, 500);
+
+          var Geo  = new THREE.TorusKnotGeometry(1000, 300, 300, 300, 3, 4);
+          const meshMaterial = new THREE.MeshPhysicalMaterial(
+          {
+              color: 0xffffff,
+              metalness : 0.25,
+              roughness : 0,
+              clearcoat : 1,
+              clearcoatRoughness : 0,
+          });
+
+          var block1 = new THREE.Mesh(BlockGeo, meshMaterial );
+          block1.position.set(4500, 500, 4500);
+          block1.castShadow = true;
+          scene.add(block1);
+
+          var block2 = new THREE.Mesh(BlockGeo, meshMaterial );
+          block2.position.set(-4500, 500, 4500);
+          block2.castShadow = true;
+          scene.add(block2);
+
+          var block3 = new THREE.Mesh(BlockGeo, meshMaterial );
+          block3.position.set(-4500, 500, -4500);
+          block3.castShadow = true;
+          scene.add(block3);
+
+          var block4 = new THREE.Mesh(BlockGeo, meshMaterial );
+          block4.position.set(4500, 500, -4500);
+          block4.castShadow = true;
+          scene.add(block4);
+
+
+          // 3D FILES
+
+          //OBJ + MTL
+
+          var mtlloader = new MTLLoader();
+          mtlloader.load("Assets/treecube.mtl" , function(materials){
+
+            materials.preload();
+
+            var objLoader = new OBJLoader();
+            objLoader.setMaterials(materials);
+
+            objLoader.load("Assets/treecube.obj", function(object){
+
+              object.scale.set(1000, 1000, 1000);
+              object.position.set(4500, 1000, 0);
+
+              for(var i = 0 ; i < object.children.length ; i++)
+              {
+                  object.children[i].castShadow = true;
+              }
+
+
+              scene.add(object);
+            });
+          });
+
+          //GLB
+
+          var GLTFLo = new GLTFLoader();
+
+          GLTFLo.load("Assets/Girl.glb", function(glb){
+
+            var girl = glb.scene;
+
+
+            girl.scale.set(1000, 1000, 1000);
+            girl.position.set(0, 0, -4500);
+
+
+
+            scene.add(girl);
+          });
+
+          //DAE - collada
+
+          var daeloader = new ColladaLoader();
+          daeloader.load("Assets/tower.dae", function(dae){
+
+            var tower = dae.scene;
+
+            //console.log(tower);
+
+            for(var i = 0 ; i < tower.children.length ; i++)
+            {
+                tower.children[i].castShadow = true;
+            }
+
+
+            tower.scale.set(1000, 1000, 1000);
+
+            scene.add(tower);
+
+
+          });
+
+          render();
+      }
+
+      function render()
+      {
+
+          var delta = clock.getDelta();
+          var elapsed = clock.elapsedTime;
+
+          controls.update();
+
+          MyLight.position.x = Math.sin(elapsed) * 8000;
+          MyLight.position.z = Math.cos(elapsed) * 8000;
+          MyLight.position.y = Math.abs(Math.cos(elapsed / 4) * 8000) + 50;
+
+          MyLight.lookAt( new THREE.Vector3(0,0,));
+
+          renderer.render(scene, camera);
+          requestAnimationFrame(render);
+      }
+
+      init();
+
+    </script>
+  </head>
+
+  <body></body>
+</html>

@@ -1,0 +1,122 @@
+<html>
+  <head>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0' />
+
+    <style>
+    body
+		{
+			margin: 0; touch-action: none;
+			background-image: -webkit-gradient(linear, 0 0, 100% 100%, color-stop(0, #877fa8), color-stop(100%, #f9ae91));
+			background-image: -webkit-linear-gradient(135deg, #877fa8, #f9ae91);
+			background-image: -moz-linear-gradient(45deg, #877fa8, #f9ae91);
+			background-image: -ms-linear-gradient(45deg, #877fa8 0, #f9ae91 100%);
+			background-image: -o-linear-gradient(45deg, #877fa8, #f9ae91);
+			background-image: linear-gradient(135deg, #877fa8, #f9ae91);
+		}
+
+        canvas  { height : 100%; width : 100%; }
+    </style>
+
+    <script type="importmap">
+        {
+          "imports": {
+            "three": "./js/build/three.module.js"
+          }
+        }
+    </script>
+
+    <script  type="module">
+
+      import * as THREE from 'three';
+
+      var scene;
+      var renderer;
+      var camera;
+
+      var group;
+      var clock;
+
+      var spotlight;
+      var mesh;
+
+      function init()
+      {
+          clock = new THREE.Clock();
+          scene = new THREE.Scene();
+
+          renderer = new THREE.WebGLRenderer({antialias : true, alpha : true});
+          renderer.setPixelRatio(window.devicePixelRatio);
+          renderer.setSize(window.innerWidth, window.innerHeight);
+          renderer.setClearColor(0x2c3e50, 0);
+          document.body.appendChild(renderer.domElement);
+
+          // ---- CAMERA ----
+
+          camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 10000 );
+          camera.position.set(0, 0, 800);
+          camera.lookAt( new THREE.Vector3(0, 0, 0) );
+          scene.add(camera);
+
+
+          // --------------------------------
+
+          var ambientLight = new THREE.AmbientLight(0xcccccc, 0.5);
+          scene.add(ambientLight);
+
+          spotlight = new THREE.SpotLight(0xcccccc, 1.5);
+          scene.add(spotlight);
+
+          // --------------------------------
+
+          var Geo  = new THREE.TorusKnotGeometry(300, 75, 252, 252, 3, 4);
+          //var Geo  = new THREE.SphereGeometry(600, 32, 32);
+
+          const meshMaterial = new THREE.MeshPhysicalMaterial(
+          {
+              color: 0x2c3e50,
+              metalness : 0.75,
+              roughness : 1,
+              clearcoat : 1,
+              clearcoatRoughness : 0,
+              emissive : 0xc0392b
+          });
+
+    			mesh = new THREE.Mesh( Geo, meshMaterial ) ;
+    			scene.add( mesh );
+
+
+          render();
+      }
+
+      //var tmpColor = new THREE.Color(1,1,0);
+
+      function render()
+      {
+
+          var delta = clock.getDelta();
+          var elapsed = clock.elapsedTime;
+
+          //mesh.material.emissive.setHex( 0xffffff );
+
+          //mesh.material.emissive = tmpColor;
+
+          mesh.material.color.setRGB(
+              Math.sin(elapsed) * 1,
+              Math.sin(elapsed / 2) * 1,
+              Math.sin(elapsed / 4) * 1,
+          );
+
+          spotlight.position.x = Math.sin(elapsed) * 1000;
+          spotlight.position.z = Math.cos(elapsed) * 1000;
+
+          renderer.render(scene, camera);
+          requestAnimationFrame(render);
+      }
+
+      init();
+
+    </script>
+  </head>
+
+  <body></body>
+</html>

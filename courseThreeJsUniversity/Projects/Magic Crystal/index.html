@@ -1,0 +1,486 @@
+<head>
+
+	<script src="../js/stats.min.js"></script>
+	<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0' />
+
+	<style>
+		body { margin: 0; touch-action: none;}
+		canvas { width: 100%; height: 100% ; touch-action: none;}
+
+	</style>
+
+	<script type="importmap">
+	    {
+	      "imports": {
+	        "three": "../js/build/three.module.js"
+	      }
+	    }
+	</script>
+
+	<script  type="module">
+
+	  import * as THREE from 'three';
+		import { MTLLoader } from '../js/examples/jsm/loaders/MTLLoader.js';
+		import { OBJLoader } from '../js/examples/jsm/loaders/OBJLoader.js';
+		import { Sky } from '../js/examples/jsm/objects/Sky.js';
+
+		/*
+		* 	--------------------------------------------------------------------------------
+		*
+		*	-------------------------------- GLOBAL VARIABLES --------------------------------
+		*
+		*	--------------------------------------------------------------------------------
+		*/
+
+		// Basic Threejs variables
+		var scene;
+		var camera;
+		var renderer;
+		var clock;
+
+		// Boolean - True if every 3D object is loaded and ready to use
+		var is_Loaded 			= false;
+
+		// Game objs
+		var monument_model 		= undefined; 	// ThreeJS Mesh	- Monument
+
+		var crystal 			= undefined; 	// ThreeJS Mesh	- Crystal
+		var crystalcolor;						// Cristal RGB color
+
+		var sprite_sun_effect;					// ThreeJS sprite
+
+		var ParticlesArray = new Array();      	// Star Particles array
+		var number_of_particles = 150;			// number of created particles in the array
+		var ParticleCenter = new THREE.Object3D();
+
+		// Performance stats
+		var stats;
+
+		//SKY - variables used with Sky Shader
+		var sky, sun;
+
+		//Reflection
+		var mirrorMeshCamera; 					// for Reflection material
+		var reflectionquality = 200; 			// ATTENTION ! High value needs a powerfull CPU -  keep low for good performances
+
+		/*
+		* 	##################
+		*
+		*	 	FUNCTION Load3DFiles()
+		*		This function is used to load 3D models into Threejs meshes - stored in global variables.
+		*		Called in init() function
+		*
+		*		These 3D object are .obj files
+		*
+		*	##################
+		*/
+		function Load3DFiles(cubeVar)
+		{
+			/*
+			*
+			*	We are using OBJLoader + MTLLoader to load the 3D models
+			*
+			*/
+			var mtlLoader = new MTLLoader();
+			var objLoader = new OBJLoader();
+
+			mtlLoader.load("../Assets/monument" + '.mtl', function(materials)
+			{
+				materials.preload();
+				var objLoader = new OBJLoader();
+				objLoader.setMaterials(materials);
+				objLoader.load("../Assets/monument" + '.obj', function(object)
+				{
+					monument_model = object;
+				});
+			});
+
+			var material = new THREE.MeshPhongMaterial( { flatShading : true, color: 0x0033ff, specular: 0x555555, shininess: 30 } );
+
+			objLoader.load("../Assets/Items/diamond" + '.obj', function(object)
+			{
+				crystal = object;
+
+				// ---------------- REFLECTION EFFECT ----------------
+
+				// ## SEE THE REFLECTION EXAMPLE IN THE PACK FOR MORE DETAILS ##
+
+				// Create cube render target
+				const cubeRenderTarget = new THREE.WebGLCubeRenderTarget( reflectionquality, { format: THREE.RGBFormat, generateMipmaps: true, minFilter: THREE.LinearMipmapLinearFilter } );
+
+				// creating a THREE.CubeCamera to capture the scene and create the reflective effect
+				mirrorMeshCamera = new THREE.CubeCamera( 0.1, 5000, cubeRenderTarget );
+				scene.add( mirrorMeshCamera );
+
+				// creating the reflective material with :
+				// envMap: mirrorSphereCamera.renderTarget.texture
+				var reflectionMeshMaterial = new THREE.MeshBasicMaterial( {  envMap: mirrorMeshCamera.renderTarget.texture } );
+
+				// reflectionMeshMaterial color
+				crystalcolor =  new THREE.Color( 0x6666ff );
+				reflectionMeshMaterial.color  = crystalcolor;
+
+				// we are applying the reflective custom material to the loaded Crystal 3D object
+				crystal.children[0].material = reflectionMeshMaterial;
+			});
+		}
+
+		/*
+		* 	##################
+		*
+		*	 	FUNCTION INITSKY()
+		*		This function is taken from official ThreeJS Sky shader example.
+		*		This function in creating the beautiful sky color gradient shader + sun
+		*
+		*	##################
+		*/
+		function initSky()
+		{
+			// Add Sky
+			sky = new Sky();
+			sky.scale.setScalar( 450000 );
+			scene.add( sky );
+
+			sun = new THREE.Vector3();
+			// SKY OPTIONS
+			const effectController = {turbidity: 10,rayleigh: 3,mieCoefficient: 0.005,mieDirectionalG: 0.7,elevation: 1,azimuth: 45,exposure: renderer.toneMappingExposure};
+
+			const uniforms = sky.material.uniforms;
+			uniforms[ 'turbidity' ].value = effectController.turbidity;
+			uniforms[ 'rayleigh' ].value = effectController.rayleigh;
+			uniforms[ 'mieCoefficient' ].value = effectController.mieCoefficient;
+			uniforms[ 'mieDirectionalG' ].value = effectController.mieDirectionalG;
+
+			const phi = THREE.MathUtils.degToRad( 90 - effectController.elevation );
+			const theta = THREE.MathUtils.degToRad( effectController.azimuth );
+
+			sun.setFromSphericalCoords( 1, phi, theta );
+
+			uniforms[ 'sunPosition' ].value.copy( sun );
+
+			renderer.toneMappingExposure = effectController.exposure;
+		}
+
+		/*
+		* 	##################
+		*
+		*	 	FUNCTION INIT()
+		*		This function is the entry point of our javascript application.
+		*		This function in creating all the basic settings like scene, camera, renderer.
+		*		This function is calling all the loading functions, and defining the main game render loop.
+		*
+		*	##################
+		*/
+		function init()
+		{
+
+			/*
+			*
+			*	We are defining the main engine variables.
+			*	clock - to track elapsed time
+			*	scene - where 3D objects are diplayed
+			*	renderer - the threejs 3D display engine
+			*	lights - to light up our scene
+			*
+			*	Calling the 3D models loading functions, events, and starting the render loop.
+			*
+			*/
+
+			clock = new THREE.Clock();
+			scene = new THREE.Scene();
+
+			// ---------------- RENDERER ----------------
+
+			renderer = new THREE.WebGLRenderer( { antialias : true } );
+			renderer.setPixelRatio( window.devicePixelRatio  );
+			renderer.setSize( window.innerWidth, window.innerHeight );
+			document.body.appendChild( renderer.domElement );  // we add the HTML element to the HTML page
+
+			// ---------------- CAMERA ----------------
+
+			camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 10000 );
+			camera.position.set( 0, 7, -10 );
+			camera.lookAt(0,4,0);
+			scene.add( camera );
+
+			// ---------------- WHITE GRID HELPER ----------------
+
+			var helper = new THREE.GridHelper( 10, 2, 0xffffff, 0xffffff );
+			scene.add( helper );
+
+			// ---------------- LIGHTS ----------------
+
+			var ambientLight = new THREE.AmbientLight( 0xcccccc, 0.5 );
+			scene.add( ambientLight );
+
+			const directionalLight = new THREE.DirectionalLight( 0xffffff, 1 );
+			directionalLight.position.set(  1, 1, -1 );
+			scene.add( directionalLight );
+
+			const pointLight = new THREE.PointLight( 0xff6666, 3 );
+			directionalLight.position.set(  0, 1, 0 );
+			scene.add( directionalLight );
+
+			// ---------------- CALLING LOADING AND INIT FUNCTIONS ----------------
+
+			Load3DFiles();
+			initSky();
+
+			// ---------------- PERFORMANCE STATS PLUGIN ----------------
+
+			stats = new Stats();
+			stats.showPanel( 0 ); // 0: fps, 1: ms, 2: mb, 3+: custom
+			document.body.appendChild( stats.dom );
+
+			// ---------------- PARTICLES ----------------
+
+			var textureLoader = new THREE.TextureLoader();
+
+			// SUN EFFECT PARTICLE
+			var particleTexture = textureLoader.load( '../Assets/Particles/sun_effect.png' );
+			var spriteMaterial = new THREE.SpriteMaterial( { map: particleTexture, transparent : true, opacity : 0.015,  color: 0x6666ff } );
+			sprite_sun_effect = new THREE.Sprite( spriteMaterial );
+			sprite_sun_effect.scale.set( 100, 100, 100);
+			sprite_sun_effect.material.color.setRGB(255, 215,0 );
+			sprite_sun_effect.material.blending = THREE.AdditiveBlending; // "glowing" particles
+			scene.add(sprite_sun_effect);
+
+			// STARS EFFECT PARTICLES
+			var texture = textureLoader.load("../Assets/Particles/stareffect.png");
+
+			var material = new THREE.SpriteMaterial({
+				color: 0x6666ff,
+				map: texture,
+				transparent: true,
+				opacity: 0.5,
+				blending: THREE.AdditiveBlending  // "glowing" particles
+			});
+
+			// We are creating all the stars particles in the array
+			for (var i = 0; i < number_of_particles; i++)
+			{
+				var particle = new THREE.Sprite( material.clone() );
+				particle.scale.multiplyScalar(1);
+				particle.velocity = new THREE.Vector3( 0, 0.1, 0 );
+				ParticlesArray.push(particle);
+				ParticleCenter.add(particle);
+				particle.material.opacity = 0;
+			}
+
+			// ---------------- EVENTS ----------------
+
+			window.addEventListener( 'resize', onWindowResize, false );
+
+			// ---------------- STARTING THE GAME MAIN LOOP ----------------
+
+			render();
+		}
+
+		/*
+		* 	##################
+		*
+		*	 	FUNCTION CheckLoaded()
+		*		This function is only used to check if all 3D models are loaded.
+		*		We are simply checking if some global variables are valid.
+		*
+		*		Return true if everything is loaded and ready to use
+		*		Return false if at least something is not loaded and not ready to use yet
+		*
+		*	##################
+		*/
+		function CheckLoaded()
+		{
+			if(monument_model == undefined)
+			{
+				return false;
+			}
+
+			if(crystal == undefined)
+			{
+				return false;
+			}
+
+			return true;
+		}
+
+		/*
+		* 	##################
+		*
+		*	 	FUNCTION RENDER()
+		*		This function is the main loop of our ThreeJS application.
+		*		This function is used for all the works needed to be done every game tick.
+		*
+		*		1) stats update ( fps ect)
+		*		2) check every tick if everything is loaded - when True, init the map (executed only ONCE thanks to "is_Loaded boolean")
+		*		3) if everything is already loaded, execute all game tick tasks like updating the crystal reflection texture, or updating the particles
+		*		4) render the 3D world
+		*		5) calling itself - that's how the "render loop" works as an endless loop
+		*
+		*	##################
+		*/
+		function render()
+		{
+			stats.begin();  					//performance stats
+
+			var delta = clock.getDelta();  		//get delta time between two frames
+			var elapsed = clock.elapsedTime;  	//get elapsed time
+
+			/*
+			*
+			*	Boolean "is_Loaded" is used to check if everything is ready to start the game.
+			*	By default it's value if false.
+			*	Each main loop tick , we are checking is everyrthing is loaded, then if true, lauching InitMap() function.
+			*	When InitMap() function is launched, "is_Loaded" is set to true - so we don't reset the map each loop tick.
+			*
+			*	This boolean is basically used to execute some action only once - when the 3D models are loaded, like the map init.
+			*/
+			if( is_Loaded == false)
+			{
+				if( CheckLoaded())
+				{
+					// As explained, this is exeuted only once !
+
+					is_Loaded = true;
+
+					// InitMap contains all the tasks to execute only once - when the 3D models are loaded
+					InitMap();
+				}
+			}
+			else // When the game is already loaded, the else case is executed at every loop tick
+			{
+				// Game tick tasks are there
+
+				// ---------------- UPDATING MAIN OBJECTS POSITION  ----------------
+
+				crystal.position.y = 4 + 0.5 * Math.sin(elapsed); // floating effect
+				crystal.rotation.y += 0.01;
+
+				// the "sun effect" and the particle center position are based on the Crystal position
+				sprite_sun_effect.position.y = crystal.position.y;
+				sprite_sun_effect.position.x = crystal.position.x;
+				sprite_sun_effect.position.z = crystal.position.z;
+
+				ParticleCenter.position.y = crystal.position.y;
+				ParticleCenter.position.x = crystal.position.x;
+				ParticleCenter.position.z = crystal.position.z;
+
+				// ---------------- UPDATING SPRITES  ----------------
+
+				for (var i = 0; i < ParticlesArray.length; i++)
+				{
+					var particle = ParticlesArray[i];
+
+					if(particle.material.opacity < 0 ) // if the particle opacity is zero - we reset the particle
+					{
+						// position reset ( Y axis is random)
+						particle.position.y = 1* Math.random();
+						particle.position.x = 0;
+						particle.position.z = 0;
+
+						// initial velocity - random too
+						particle.velocity.y = (Math.random() * 20  -10) * 0.001 ;
+						particle.velocity.x = (Math.random() * 20  -10) * 0.001 ;
+						particle.velocity.z = (Math.random() * 20  -10) * 0.001 ;
+
+						// particle scale - random too
+						var particlescale = Math.random();
+						particle.scale.set(particlescale, particlescale, particlescale);
+
+						// initial opacity and color
+						particle.material.opacity =  Math.random() * 0.8 ; // initial opacity is random
+						particle.material.color = crystalcolor; // the particle color is based on the crystal current color
+					}
+					// PARTICLES - EACH FRAME
+
+					particle.material.opacity -= Math.random() *0.01; // opacity degression( random)
+
+					// velocity update ( random too)
+					particle.velocity.y += (Math.random() * 20  -10) * 0.002 ;
+					particle.velocity.x += (Math.random() * 20  -10) *0.002 ;
+					particle.velocity.z += (Math.random() * 20  -10) *0.002 ;
+					particle.position.add(particle.velocity);
+				}
+
+				// ---------------- REFLECTION ----------------
+
+				// The camera used for the reflection effect position shall be equal to crystal position ( because the crystal is floating on Y axis)
+				mirrorMeshCamera.position.x = crystal.position.x;
+				mirrorMeshCamera.position.y = crystal.position.y;
+				mirrorMeshCamera.position.z = crystal.position.z;
+
+				crystal.visible = false; 						// the crystal is set invisible
+				mirrorMeshCamera.update( renderer, scene );		// the camera used in the reflection effect is "taking a picture of the scene"
+				crystal.visible = true;							// the crystal is set visible
+				// it's important to toggle the crystal visibility, because the reflection camera in inside the crystal, so it's necesary to "take a picture" of the scene without obstruction.
+
+				// ---------------- COLOR FADING ----------------
+
+				// the color of the crystal is based on RGB values , edited each frame, based on elapsed time - for a nice color fading effect
+				crystalcolor.g = Math.sin(elapsed * 3) * 0.8;
+				crystalcolor.b = Math.sin(elapsed) ;
+				crystalcolor.g = Math.sin(elapsed) * 0.5;
+			}
+
+			renderer.render( scene, camera ); 	// We are rendering the 3D world
+			stats.end(); 						// stats , fps ratio ect...
+			requestAnimationFrame( render );	// we are calling render() again,  to loop
+		}
+
+		/*
+		* 	##################
+		*
+		*	 	FUNCTION INITMAP()
+		*		InitMap contains all the tasks to execute only once - when the 3D models are loaded
+		*
+		*		1) Build the map with 3D elements
+		*		2) Create a wireframe clone of the crystal for the wireframe effect
+		*
+		*	##################
+		*/
+		function InitMap()
+		{
+			// monument
+			var tmpblock1 = monument_model.clone();
+			tmpblock1.position.z = -4;
+			tmpblock1.scale.set(3, 3, 3);
+			tmpblock1.rotation.y = Math.PI;
+			scene.add( tmpblock1 );
+
+			// particles and crystal
+			scene.add(ParticleCenter);
+			scene.add(crystal);
+
+			//wireframe crystal clone
+			var crystal_wireframe = crystal.clone()
+			const material_wireframe = new THREE.MeshBasicMaterial( {wireframe: true,transparent : true,opacity : 0.5} );
+			material_wireframe.color = crystalcolor;
+			crystal_wireframe.children[0].material = material_wireframe;
+			crystal.add(crystal_wireframe); // ATTENTION ! crystal.add() - not scene.add() - so when the crystal moves, all the children elements (our wireframe clone) can move too
+
+		}
+
+		/*
+		* 	##################
+		*
+		*	 	FUNCTION ONWINDOWRESIZE()
+		*		This function is called when the window is resized, update the camera projection to fit the new size
+		*
+		*	##################
+		*/
+		function onWindowResize()
+		{
+			camera.aspect = window.innerWidth / window.innerHeight;
+			camera.updateProjectionMatrix();
+
+			renderer.setSize( window.innerWidth, window.innerHeight );
+		}
+
+		init();
+
+	</script>
+
+</head>
+
+<body>
+
+</body>

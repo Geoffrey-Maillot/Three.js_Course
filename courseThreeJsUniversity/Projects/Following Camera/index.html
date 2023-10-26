@@ -1,0 +1,548 @@
+<head>
+
+	<script src="../js/stats.min.js"></script>
+	<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0' />
+
+	<style>
+		body { margin: 0; touch-action: none;}
+		canvas { width: 100%; height: 100% ; touch-action: none;}
+
+	</style>
+
+	<script type="importmap">
+	    {
+	      "imports": {
+	        "three": "../js/build/three.module.js"
+	      }
+	    }
+	</script>
+
+	<script  type="module">
+
+	  import * as THREE from 'three';
+		import { MTLLoader } from '../js/examples/jsm/loaders/MTLLoader.js';
+		import { OBJLoader } from '../js/examples/jsm/loaders/OBJLoader.js';
+		import { Sky } from '../js/examples/jsm/objects/Sky.js';
+		import { GLTFLoader } from '../js/examples/jsm/loaders/GLTFLoader.js';
+
+		/*
+		* 	--------------------------------------------------------------------------------
+		*
+		*	-------------------------------- GLOBAL VARIABLES --------------------------------
+		*
+		*	--------------------------------------------------------------------------------
+		*/
+
+		// Basic Threejs variables
+		var scene;
+		var camera;
+		var renderer;
+		var clock;
+
+		// Boolean - True if every 3D object is loaded and ready to use
+		var is_Loaded 				= false;
+
+		// Performance stats
+		var stats;
+
+		// Sky shader
+		var sky, sun;
+
+		// PLAYER
+		var MainPlayer 				= undefined; 		// ThreeJS Mesh
+		var PlayerMixer 			= undefined; 		// ThreeJS Animation Mixer
+		var Player_anim_ATTACK;							// ThreeJS Animation Attack
+		var Player_anim_RUN;							// ThreeJS Animation Run (Fly)
+
+		// GAME MAP OBJECTS
+		var plant_cube 				= undefined;		// ThreeJS Mesh	- CUBE WITH PLANTS
+		var tree_cube 				= undefined;		// ThreeJS Mesh	- CUBE WITH A TREE
+		var basic_cube 				= undefined;		// ThreeJS Mesh	- SIMPLE CUBE
+
+		// Javascript Object, map data, each number is a type of block
+		// 0 : Empty Block
+		// 1 : Plant Block
+		// 2 : Tree Block
+		//
+		// ATTENTION - For this setup, width and length of the double array must be the same !
+		var map1_data = {
+			"data" : [
+				[2, 2, 2, 2, 0, 0, 0, 0, 2, 2],
+				[2, 1, 1, 0, 1, 0, 0, 0, 0, 2],
+				[1, 0, 0, 1, 1, 1, 0, 0, 1, 0],
+				[0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+				[0, 0, 0, 0, 1, 2, 2, 2, 0, 0],
+				[0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+				[1, 2, 2, 0, 0, 0, 0, 1, 0, 2],
+				[0, 0, 0, 0, 1, 2, 2, 0, 0, 2],
+				[0, 0, 0, 0, 1, 0, 0, 1, 0, 0],
+				[2, 2, 0, 0, 0, 0, 0, 0, 1, 2]
+			]
+		};
+
+		/*
+		* 	--------------------------------------------------------------------------------
+		*
+		*	--------------------------------	FUNCTIONS 	--------------------------------
+		*
+		*	--------------------------------------------------------------------------------
+		*/
+
+		/*
+		* 	##################
+		*
+		*	 	FUNCTION LOADMAP()
+		*		This function is used to load map data like the global variable "map1_data".
+		*		The JS data will be converted into ThreeJS scene data.
+		*
+		*		Depending of the data value at position X/Y in the JS double array, a block will be created.
+		*		0 : Empty Block
+		*		1 : Plant Block
+		*		2 : Tree Block
+		*
+		*		Created at position X/Y in the ThreeJS scene.
+		*
+		*		Arg1 : Map data ( JS object with "data" double array attribute).
+		*
+		*	##################
+		*/
+
+		function loadMap(mapdata)
+		{
+			/*
+			*	Double imbricated For loops.
+			*	This double-loop is used to check the value of every [x/y] combinaison of a double JS array.
+			*	We are checking the value of every [x/y] combinaison, and creating the 3D element corresponding to the case value.
+			*
+			*		0 : Empty Block
+			*		1 : Plant Block
+			*		2 : Tree Block
+			*
+			*/
+
+			var size  = mapdata.data.length;
+
+			for(var x = 0 ; x < size ; x++)
+			{
+				for(var y = 0 ; y < size ; y++)
+				{
+					// This is to calculate the scene 3D position of the created element
+					// every block is size 2 in our threejs scene
+					//
+					// We want something like :
+					//		the block data [0/0] to be at scene position [ -10 / -10]
+					// 		the block data [10/10] to be at scene position [ 10 / 10]
+					// 		the block data [5/5] to be at scene position [ 0 / 0]
+					// 		ect ....
+					// Like this :
+					/*
+					*		0/10 ---------------------- 10/10
+					*		|															|
+					*		|															|
+					*		|					scene center				|
+					*		|							5/5							|
+					*		|															|
+					*		|															|
+					*		0/0 -------------------------10/0
+					*/
+
+					var posx = (x*2) - (size/2)*2; // position x
+					var posy = (y*2) - (size/2)*2; // position y ( ATTENTION, this is the Z axis in threejs logic)
+
+					switch(mapdata.data[y][x])
+					{
+						case 0: // If [x/y] value is 0 - We are creating a basic block
+							var tmpbloc = basic_cube.clone();
+							tmpbloc.position.set(posx, 0, posy); // ( ATTENTION, "y position" is the Z axis in threejs logic)
+							scene.add(tmpbloc);
+						break;
+
+						case 1: // If [x/y] value is 1 - We are creating a plant block
+							var tmpbloc = plant_cube.clone();
+							tmpbloc.position.set(posx, 0, posy); // ( ATTENTION, "y position" is the Z axis in threejs logic)
+							scene.add(tmpbloc);
+						break;
+
+						case 2: // If [x/y] value is 2 - We are creating a tree block
+							var tmpbloc = tree_cube.clone();
+							tmpbloc.position.set(posx, 0, posy); // ( ATTENTION, "y position" is the Z axis in threejs logic)
+							scene.add(tmpbloc);
+						break;
+					}
+				}
+
+			}
+
+			// end of loadMap()
+		}
+
+		/*
+		* 	##################
+		*
+		*	 	FUNCTION INITSKY()
+		*		This function is taken from official ThreeJS Sky shader example.
+		*		This function in creating the beautiful sky color gradient shader + sun
+		*
+		*	##################
+		*/
+		function initSky()
+		{
+			// Add Sky
+			sky = new Sky();
+			sky.scale.setScalar( 450000 );
+			scene.add( sky );
+
+			sun = new THREE.Vector3();
+
+			// SKY OPTIONS
+			const effectController = {turbidity: 10,rayleigh: 3,mieCoefficient: 0.005,mieDirectionalG: 0.7,elevation: 2,azimuth: 45,exposure: renderer.toneMappingExposure};
+
+			const uniforms = sky.material.uniforms;
+			uniforms[ 'turbidity' ].value = effectController.turbidity;
+			uniforms[ 'rayleigh' ].value = effectController.rayleigh;
+			uniforms[ 'mieCoefficient' ].value = effectController.mieCoefficient;
+			uniforms[ 'mieDirectionalG' ].value = effectController.mieDirectionalG;
+
+			const phi = THREE.MathUtils.degToRad( 90 - effectController.elevation );
+			const theta = THREE.MathUtils.degToRad( effectController.azimuth );
+
+			sun.setFromSphericalCoords( 1, phi, theta );
+
+			uniforms[ 'sunPosition' ].value.copy( sun );
+
+			renderer.toneMappingExposure = effectController.exposure;
+		}
+
+		/*
+		* 	##################
+		*
+		*	 	FUNCTION INIT()
+		*		This function is the entry point of our javascript application.
+		*		This function in creating all the basic settings like scene, camera, renderer.
+		*		This function is calling all the loading functions, and defining the main render loop.
+		*
+		*	##################
+		*/
+		function init()
+		{
+
+			/*
+			*
+			*	We are defining the main engine variables.
+			*	clock - to track elapsed time
+			*	scene - where 3D objects are diplayed
+			*	renderer - the threejs 3D display engine
+			*	lights - to light up our scene
+			*	perspective camera
+			*
+			*
+			*	Calling the 3D models loading functions, events, and starting the render loop.
+			*
+			*/
+
+			clock = new THREE.Clock();
+			scene = new THREE.Scene();
+
+			// ---------------- RENDERER ----------------
+
+			renderer = new THREE.WebGLRenderer( { antialias : true } );
+			renderer.setPixelRatio( window.devicePixelRatio  );
+			renderer.setSize( window.innerWidth, window.innerHeight );
+			document.body.appendChild( renderer.domElement ); // we add the HTML element to the HTML page
+
+			// ---------------- CAMERA ----------------
+
+			camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 10000 );
+			camera.position.set( 0, 10, -8 );
+			camera.lookAt(new THREE.Vector3(0,5,0));
+
+			// the camera is not added to the scene yet !
+
+			// ---------------- LIGHTS ----------------
+
+			var ambientLight = new THREE.AmbientLight( 0xcccccc, 2 );
+			scene.add( ambientLight );
+
+
+			const directionalLight = new THREE.DirectionalLight( 0xffffff, 0.6 );
+			directionalLight.position.set( - 1, 1, 1 );
+			scene.add( directionalLight );
+
+			// ---------------- CALLING LOADING AND INIT FUNCTIONS ----------------
+
+			initSky();
+			LoadPlayer();
+			LoadCubes();
+
+			// ---------------- EVENTS ----------------
+
+			window.addEventListener( 'resize', onWindowResize, false );
+
+			// ---------------- PERFORMANCE STATS PLUGIN ----------------
+
+			stats = new Stats();
+			stats.showPanel( 0 ); // 0: fps, 1: ms, 2: mb, 3+: custom
+			document.body.appendChild( stats.dom );
+
+			// ---------------- STARTING THE GAME MAIN LOOP ----------------
+
+			render();
+
+		}
+
+		/*
+		* 	##################
+		*
+		*	 	FUNCTION RENDER()
+		*		This function is the main loop of our ThreeJS application.
+		*		This function is used for all the works needed to be done every game tick.
+		*
+		*		1) stats update ( fps ect)
+		*		2) check every tick if everything is loaded - when True, init the map (executed only ONCE thanks to "is_Loaded boolean")
+		*		3) if everything is already loaded, execute all game tick tasks like updating animated 3D models pose
+		*		4) render the 3D world
+		*		5) calling itself - that's how the "render loop" works as an endless loop
+		*
+		*	##################
+		*/
+
+		function render()
+		{
+			stats.begin(); 						//performance stats
+
+			var delta = clock.getDelta();  		//get delta time between two frames
+			var elapsed = clock.elapsedTime;  	//get elapsed time
+
+			/*
+			*
+			*	Boolean "is_Loaded" is used to check if everything is ready to start the game.
+			*	By default it's value if false.
+			*	Each main loop tick , we are checking is everyrthing is loaded, then, lauching InitMap() function.
+			*	When InitMap() function is launched, "is_Loaded" is set to true - so we don't reset the map each loop tick.
+			*
+			*	This boolean is basically used to execute some action only once - when the 3D models are loaded, like the map init.
+			*/
+			if( is_Loaded == false)
+			{
+				if( CheckLoaded())
+				{
+					// As explained, this is exeuted only once !
+
+					is_Loaded = true;
+
+					// InitMap contains all the tasks to execute only once - when the 3D models are loaded
+					InitMap();
+				}
+			}
+			else // When the game is already loaded, the else case is executed at every loop tick
+			{
+				// Game tick tasks are there
+
+				var speed = 1;
+
+				PlayerMixer.update( delta * speed); // we are updating player bee animations , based on elapsed time
+
+				// ---------------- PLAYER POSITION ----------------
+
+				var circle_size = 7;
+
+				MainPlayer.position.x = circle_size*2* Math.sin(elapsed/4); 	// player position X axis update - based on elapsed time
+				MainPlayer.position.z = circle_size* Math.cos(elapsed/4);		// player position Z axis update - based on elapsed time
+
+				MainPlayer.lookAt( circle_size*2* Math.sin(elapsed/4 + 1) , 2, circle_size* Math.cos(elapsed/4 + 1)); // turn the player to face the next destination ( + 1)
+
+				renderer.render( scene, camera ); 	// rendering the 3D world
+			}
+
+			stats.end(); 							// stats , fps ratio ect...
+			requestAnimationFrame( render ); 		// we are calling render() again,  to loop
+		}
+
+		/*
+		* 	##################
+		*
+		*	 	FUNCTION LOADCUBES()
+		*		This function is used to load all 3D models into Threejs mesh global variables.
+		*		Called in init() function
+		*
+		*		These 3D objects are .obj + .mtl files - static and non animated 3D objects
+		*
+		*	##################
+		*/
+		function LoadCubes()
+		{
+			var mtlLoader = new MTLLoader();
+
+			mtlLoader.load("../Assets/plant_block" + '.mtl', function(materials)
+			{
+				materials.preload();
+				var objLoader = new OBJLoader();
+				objLoader.setMaterials(materials);
+				objLoader.load("../Assets/plant_block" + '.obj', function(object)
+				{
+					plant_cube = object; // plant_cube global var is set
+				});
+			});
+
+			mtlLoader.load("../Assets/tree_block" + '.mtl', function(materials)
+			{
+				materials.preload();
+				var objLoader = new OBJLoader();
+				objLoader.setMaterials(materials);
+				objLoader.load("../Assets/tree_block" + '.obj', function(object)
+				{
+					tree_cube = object; // tree_cube global var is set
+				});
+			});
+
+			mtlLoader.load("../Assets/basic_block" + '.mtl', function(materials)
+			{
+				materials.preload();
+				var objLoader = new OBJLoader();
+				objLoader.setMaterials(materials);
+				objLoader.load("../Assets/basic_block" + '.obj', function(object)
+				{
+					basic_cube = object; // basic_cube global var is set
+				});
+			});
+
+
+		}
+
+		/*
+		* 	##################
+		*
+		*	 	FUNCTION CheckLoaded()
+		*		This function is only used to check if all 3D models are loaded.
+		*		We are simply checking if some global variables are valid.
+		*
+		*		Return true if everything is loaded and ready to use
+		*		Return false if at least something is not loaded and not ready to use yet
+		*
+		*	##################
+		*/
+		function CheckLoaded()
+		{
+			if(!MainPlayer)
+			{
+				return false;
+			}
+
+			if(tree_cube == undefined)
+			{
+				return false;
+			}
+
+			if(plant_cube == undefined)
+			{
+				return false;
+			}
+
+			if(basic_cube == undefined)
+			{
+				return false;
+			}
+
+			if(PlayerMixer == undefined)
+			{
+				return false;
+			}
+
+			return true;
+		}
+
+		/*
+		* 	##################
+		*
+		*	 	FUNCTION LOADPLAYER()
+		*		This function is used to load player bee 3D model into a Threejs mesh - stored in a global variable.
+		*		Called in init() function
+		*
+		*		This 3D object is a .glb file - animated model
+		*
+		*	##################
+		*/
+		function LoadPlayer()
+		{
+				/*
+				*
+				*	We are using GLTFLoader to load the Bee.glb animated model
+				*
+				*/
+				var loader = new GLTFLoader();
+				loader.load( '../Assets/Bee.glb', function ( gltf )
+				{
+
+						// ---------------- 3D MODEL ANIMATION MIXER----------------
+
+						PlayerMixer= new THREE.AnimationMixer( gltf.scene );
+
+						//Anims
+						Player_anim_ATTACK = gltf.animations[ 0] ; // first animation stored in the model is ATTACT animation (when the bee is attacking)
+						Player_anim_RUN  = gltf.animations[ 1] ; // second animation stored in the model is RUN animation (moving and idle, when the bee is flying)
+
+						Player_anim_ATTACK.clampWhenFinished = true;
+						Player_anim_RUN.clampWhenFinished = true;
+
+						//	The ATTACK animation is not used in this project , but you can play it with :
+						//	PlayerMixer.clipAction( Player_anim_ATTACK).play();
+
+						PlayerMixer.clipAction( Player_anim_RUN).play();
+
+						// ---------------- 3D MODEL LOADED INTO GLOBAL MainPlayer VARIABLE ----------------
+
+						MainPlayer = gltf.scene;
+						MainPlayer.scale.set(0.5, 0.5, 0.5);
+						MainPlayer.position.y = 2;
+
+						// The bee player 3D model is not added to the scene yet !
+
+				} );
+		}
+
+		/*
+		* 	##################
+		*
+		*	 	FUNCTION INITMAP()
+		*		InitMap contains all the tasks to execute only once - when the 3D models are loaded
+		*
+		*		1) Add the player to the scene
+		*		2) launch loadMap() to build the map
+		*
+		*	##################
+		*/
+		function InitMap()
+		{
+				scene.add(MainPlayer); // add the bee to the scene
+
+				// we are adding the camera to the bee , so , when the bee move, the camera position will be updated to keep the same point of view
+				MainPlayer.add( camera );
+
+				loadMap(map1_data);	// map loading
+		}
+
+		/*
+		* 	##################
+		*
+		*	 	FUNCTION ONWINDOWRESIZE()
+		*		This function is called when the window is resized, update the camera projection to fit the new size
+		*
+		*	##################
+		*/
+		function onWindowResize()
+		{
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+
+				renderer.setSize( window.innerWidth, window.innerHeight );
+		}
+
+		init();
+
+	</script>
+
+</head>
+
+<body>
+
+</body>

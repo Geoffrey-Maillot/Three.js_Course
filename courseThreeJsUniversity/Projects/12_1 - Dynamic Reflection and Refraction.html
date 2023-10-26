@@ -1,0 +1,604 @@
+<head>
+	<meta  name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0' />
+
+	<style>
+		body { margin: 0; touch-action: none;}
+		canvas { width: 100%; height: 100% ; touch-action: none;}
+
+	</style>
+
+	<script type="importmap">
+      {
+        "imports": {
+          "three": "./js/build/three.module.js"
+        }
+      }
+  </script>
+
+  <script  type="module">
+
+    import * as THREE from 'three';
+		import { MTLLoader } from './js/examples/jsm/loaders/MTLLoader.js';
+		import { OBJLoader } from './js/examples/jsm/loaders/OBJLoader.js';
+		import { OrbitControls } from './js/examples/jsm/controls/OrbitControls.js';
+		import { Sky } from './js/examples/jsm/objects/Sky.js';
+		import { GLTFLoader } from './js/examples/jsm/loaders/GLTFLoader.js';
+
+		/*
+		* 	--------------------------------------------------------------------------------
+		*
+		*	-------------------------------- GLOBAL VARIABLES --------------------------------
+		*
+		*	--------------------------------------------------------------------------------
+		*/
+
+		// Basic Threejs variables
+		var scene;
+		var camera;
+		var renderer;
+		var clock;
+
+		// Boolean - True if every 3D object is loaded and ready to use
+		var is_Loaded 			= false;
+
+		// Game objs
+		var plant_cube 			= undefined; 		// ThreeJS Mesh	- CUBE WITH PLANTS
+		var tree_cube 			= undefined; 		// ThreeJS Mesh	- CUBE WITH A TREE
+		var basic_cube 			= undefined; 		// ThreeJS Mesh	- SIMPLE CUBE
+
+		var fence_cube			= undefined;		// ThreeJS Mesh
+		var fence_seamless_cube = undefined; 		// ThreeJS Mesh
+		var fence_angle_cube 	= undefined; 		// ThreeJS Mesh
+
+		// PLAYER
+		var MainPlayer;  							// ThreeJS Mesh
+		var PlayerMixer 		= undefined; 		// ThreeJS Animation Mixer
+		var Player_anim_IDLE;						// Animation IDLE
+		var Player_anim_RUN;						// Animation RUN
+
+		//SKY - variables used with Sky Shader
+		var sky, sun;
+
+		//refl
+		var mirrorSphere;
+		var mirrorCamera;
+		var reflectQuality = 800;
+
+		//refract
+		var refractMesh;
+		var refractCamera;
+		var refractQuality = 800;
+
+
+		/*
+		* 	##################
+		*
+		*	 	FUNCTION LoadPlayer_and_NPC()
+		*		This function is used to load player Girl.glb 3D models into a Threejs mesh - stored in a global variable.
+		*		Called in init() function
+		*
+		*		This 3D object is a .glb file - animated model
+		*		The animations were exported from Blender directly into the model, so we can load the animations too.
+		*
+		*	##################
+		*/
+		function LoadPlayer_and_NPC()
+		{
+			/*
+			*
+			*	We are using GLTFLoader to load the Girl.glb animated model
+			*
+			*/
+			var loader = new GLTFLoader();
+				loader.load( 'Assets/Girl.glb', function ( gltf )
+				{
+					// ---------------- 3D MODEL ANIMATION MIXER----------------
+
+					//Setting up the animation mixer
+					PlayerMixer= new THREE.AnimationMixer( gltf.scene );
+
+					//Anims
+					Player_anim_IDLE = gltf.animations[ 0] ; 	// first animation stored in the model is IDLE animation (when the player is not moving)
+					Player_anim_RUN  = gltf.animations[ 1] ; 	// second animation stored in the model is RUN animation
+
+					Player_anim_IDLE.clampWhenFinished = true;
+					Player_anim_RUN.clampWhenFinished = true;
+
+					// wa are playing the IDLE animation
+					PlayerMixer.clipAction( Player_anim_IDLE).play();
+
+					MainPlayer = gltf.scene;
+					MainPlayer.scale.set(0.5, 0.5, 0.5);
+					MainPlayer.position.y = 1;
+
+					// The player 3D model is not added to the scene yet !
+
+				} );
+
+		}
+
+		/*
+		* 	##################
+		*
+		*	 	FUNCTION LOADCUBES()
+		*		This function is used to load all .OBJ 3D models into Threejs mesh global variables.
+		*		Called in init() function
+		*
+		*		These 3D objects are .obj + .mtl files - static and non animated 3D objects
+		*
+		*	##################
+		*/
+		function LoadCubes(cubeVar)
+		{
+			var mtlLoader = new MTLLoader();
+			var objLoader = new OBJLoader();
+
+			mtlLoader.load("Assets/plant_block" + '.mtl', function(materials)
+			{
+				materials.preload();
+				var objLoader = new OBJLoader();
+				objLoader.setMaterials(materials);
+				objLoader.load("Assets/plant_block" + '.obj', function(object)
+				{
+					plant_cube = object;
+				});
+			});
+
+			mtlLoader.load("Assets/tree_block" + '.mtl', function(materials)
+			{
+				materials.preload();
+				var objLoader = new OBJLoader();
+				objLoader.setMaterials(materials);
+				objLoader.load("Assets/tree_block" + '.obj', function(object)
+				{
+					tree_cube = object;
+				});
+			});
+
+			mtlLoader.load("Assets/basic_block" + '.mtl', function(materials)
+			{
+				materials.preload();
+				var objLoader = new OBJLoader();
+				objLoader.setMaterials(materials);
+				objLoader.load("Assets/basic_block" + '.obj', function(object)
+				{
+					basic_cube = object;
+				});
+			});
+
+			mtlLoader.load("Assets/fence_block" + '.mtl', function(materials)
+			{
+				materials.preload();
+				var objLoader = new OBJLoader();
+				objLoader.setMaterials(materials);
+				objLoader.load("Assets/fence_block" + '.obj', function(object)
+				{
+					fence_cube = object;
+				});
+			});
+
+			mtlLoader.load("Assets/fence_seamless_block" + '.mtl', function(materials)
+			{
+				materials.preload();
+				var objLoader = new OBJLoader();
+				objLoader.setMaterials(materials);
+				objLoader.load("Assets/fence_seamless_block" + '.obj', function(object)
+				{
+					fence_seamless_cube = object;
+				});
+			});
+
+			mtlLoader.load("Assets/fence_angle_block" + '.mtl', function(materials)
+			{
+				materials.preload();
+				var objLoader = new OBJLoader();
+				objLoader.setMaterials(materials);
+				objLoader.load("Assets/fence_angle_block" + '.obj', function(object)
+				{
+					fence_angle_cube = object;
+				});
+			});
+
+		}
+
+		/*
+		* 	##################
+		*
+		*	 	FUNCTION INITSKY()
+		*		This function is taken from official ThreeJS Sky shader example.
+		*		This function in creating the beautiful sky color gradient shader + sun
+		*
+		*	##################
+		*/
+		function initSky()
+		{
+			// Add Sky
+			sky = new Sky();
+			sky.scale.setScalar( 450000 );
+			scene.add( sky );
+
+			sun = new THREE.Vector3();
+
+			// SKY OPTIONS
+			const effectController = {turbidity: 10,rayleigh: 3,mieCoefficient: 0.005,mieDirectionalG: 0.7,elevation: 2,azimuth: 45,exposure: renderer.toneMappingExposure};
+
+			const uniforms = sky.material.uniforms;
+			uniforms[ 'turbidity' ].value = effectController.turbidity;
+			uniforms[ 'rayleigh' ].value = effectController.rayleigh;
+			uniforms[ 'mieCoefficient' ].value = effectController.mieCoefficient;
+			uniforms[ 'mieDirectionalG' ].value = effectController.mieDirectionalG;
+
+			const phi = THREE.MathUtils.degToRad( 90 - effectController.elevation );
+			const theta = THREE.MathUtils.degToRad( effectController.azimuth );
+
+			sun.setFromSphericalCoords( 1, phi, theta );
+
+			uniforms[ 'sunPosition' ].value.copy( sun );
+
+			renderer.toneMappingExposure = effectController.exposure;
+			renderer.render( scene, camera );
+		}
+
+		/*
+		* 	##################
+		*
+		*	 	FUNCTION INIT()
+		*		This function is the entry point of our javascript application.
+		*
+		*	##################
+		*/
+		function init()
+		{
+			/*
+			*
+			*	We are defining the main engine variables.
+			*	clock - to track elapsed time
+			*	scene - where 3D objects are diplayed
+			*	renderer - the threejs 3D display engine
+			*	controls - for camera controls
+			*	lights - to light up our scene
+			*
+			*
+			*	Calling the 3D models loading functions, events, and starting the render loop.
+			*
+			*/
+
+			clock = new THREE.Clock();
+			scene = new THREE.Scene();
+
+			// ---------------- RENDERER ----------------
+
+			renderer = new THREE.WebGLRenderer( { antialias : true } );
+			renderer.setPixelRatio( window.devicePixelRatio  );
+			renderer.setSize( window.innerWidth, window.innerHeight );
+			renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
+			document.body.appendChild( renderer.domElement ); // we add the HTML element to the HTML page
+
+			// ---------------- CAMERA ----------------
+
+			camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 10000 );
+			camera.position.set( -5, 5, -5 );
+			camera.lookAt(new THREE.Vector3(0,0,0));
+			scene.add( camera );
+
+			// ---------------- CONTROLS ----------------
+
+			const controls = new OrbitControls( camera, renderer.domElement );
+			controls.update();
+
+			// ---------------- WHITE GRID HELPER ----------------
+
+			var helper = new THREE.GridHelper( 10, 2, 0xffffff, 0xffffff );
+			scene.add( helper );
+
+			// ---------------- LIGHTS ----------------
+
+			var ambientLight = new THREE.AmbientLight( 0xcccccc, 2 );
+			scene.add( ambientLight );
+
+			const directionalLight = new THREE.DirectionalLight( 0xffffff, 2 );
+			directionalLight.position.set( - 1, 1, 1 );
+			scene.add( directionalLight );
+
+
+			// ---------------- CALLING LOADING AND INIT FUNCTIONS ----------------
+
+			LoadCubes();
+			LoadPlayer_and_NPC();
+			initSky();
+
+			// ---------------- EVENTS ----------------
+
+			window.addEventListener( 'resize', onWindowResize, false );
+
+			 var runbutton = document.getElementById("run").onclick = function() {
+
+				 PlayerMixer.clipAction( Player_anim_IDLE).stop();
+				 PlayerMixer.clipAction( Player_anim_RUN).play();
+			 };
+
+			 var idlebutton = document.getElementById("idle").onclick = function() {
+
+				PlayerMixer.clipAction( Player_anim_RUN).stop();
+				PlayerMixer.clipAction( Player_anim_IDLE).play();
+			 };
+
+			 // ---------------- STARTING THE GAME MAIN LOOP ----------------
+
+			render();
+
+		}
+
+		/*
+		* 	##################
+		*
+		*	 	FUNCTION CheckLoaded()
+		*		This function is only used to check if all 3D models are loaded.
+		*
+		*	##################
+		*/
+		function CheckLoaded()
+		{
+			if(fence_cube == undefined)
+			{
+				return false;
+			}
+
+			if(fence_angle_cube == undefined)
+			{
+				return false;
+			}
+
+			if(fence_seamless_cube == undefined)
+			{
+				return false;
+			}
+
+			if(tree_cube == undefined)
+			{
+				return false;
+			}
+
+			if(plant_cube == undefined)
+			{
+				return false;
+			}
+
+			if(basic_cube == undefined)
+			{
+				return false;
+			}
+
+			if(PlayerMixer == undefined)
+			{
+				return false;
+			}
+
+			if(MainPlayer == undefined)
+			{
+				return false;
+			}
+
+			return true;
+		}
+
+		/*
+		* 	##################
+		*
+		*	 	FUNCTION RENDER()
+		*		This function is the main loop of our ThreeJS application.
+		*
+		*	##################
+		*/
+
+		function render()
+		{
+
+			var delta = clock.getDelta(); //get delta time between two frames
+
+			if( is_Loaded == false)
+			{
+					if( CheckLoaded())
+					{
+						InitMap();
+					}
+			}
+			else
+			{
+				// Game tick tasks are there
+
+				// refl
+				mirrorSphere.visible = false;
+				mirrorCamera.update(renderer, scene);
+				mirrorSphere.visible = true;
+
+				//refr
+
+				refractMesh.visible = false;
+				refractCamera.update(renderer, scene);
+				refractMesh.visible = true;
+
+
+				PlayerMixer.update( delta ); 	// we are updating player animations , basing on elapsed time
+			}
+
+			renderer.render( scene, camera ); 	// We are rendering the 3D world
+			requestAnimationFrame( render );	// we are calling render() again,  to loop
+		}
+
+		/*
+		* 	##################
+		*
+		*	 	FUNCTION INITMAP()
+		*		InitMap contains all the tasks to execute only once - when the 3D models are loaded
+		*
+		*		1) Add the player to the scene
+		*		2) Build the map with 3D elements
+		*		3) create the reflection effect with a camera and a special texture effect
+		*
+		*	##################
+		*/
+		function InitMap()
+		{
+			scene.add( MainPlayer); // we are adding the player to the map
+
+			// ---------------- MAP BLOCKS ----------------
+
+			var tmpblock1 = basic_cube.clone();
+			scene.add( tmpblock1 );
+
+			var tmpblock2 = basic_cube.clone();
+			tmpblock2.position.x = 2;
+			scene.add( tmpblock2 );
+
+			var tmpblock3 = plant_cube.clone();
+			tmpblock3.position.x = -2;
+			scene.add( tmpblock3 );
+
+			var tmpblock4 = basic_cube.clone();
+			tmpblock4.position.z = -2;
+			tmpblock4.position.x = -2;
+			scene.add( tmpblock4 );
+
+			var tmpblock5 = tree_cube.clone();
+			tmpblock5.position.z = -2;
+			tmpblock5.position.x = 2;
+			scene.add( tmpblock5 );
+
+			var tmpblock6 = plant_cube.clone();
+			tmpblock6.position.z = -2;
+			scene.add( tmpblock6 );
+
+			var tmpblock7 = plant_cube.clone();
+			tmpblock7.position.z = 2;
+			scene.add( tmpblock7 );
+
+			var tmpblock8 = basic_cube.clone();
+			tmpblock8.position.z = 2;
+			tmpblock8.position.x = 2;
+			scene.add( tmpblock8 );
+
+			var tmpblock9 = basic_cube.clone();
+			tmpblock9.position.z = 2;
+			tmpblock9.position.x = -2;
+			scene.add( tmpblock9 );
+
+			var tmpblock10 = fence_angle_cube.clone();
+			tmpblock10.position.z = 4;
+			tmpblock10.position.x = -4;
+			tmpblock10.rotation.y = Math.PI;
+			scene.add(tmpblock10);
+
+			var tmpblock11 = fence_cube.clone();
+			tmpblock11.position.z = 4;
+			tmpblock11.position.x = -2;
+			scene.add(tmpblock11);
+
+			var tmpblock12 = fence_cube.clone();
+			tmpblock12.position.z = 2;
+			tmpblock12.position.x = -4;
+			tmpblock12.rotation.y = Math.PI/2;
+			scene.add(tmpblock12);
+
+			var tmpblock13 = plant_cube.clone();
+			tmpblock13.position.z = 0;
+			tmpblock13.position.x = -4;
+			tmpblock13.rotation.y = Math.PI/2;
+			scene.add(tmpblock13);
+
+			var tmpblock14 = basic_cube.clone();
+			tmpblock14.position.z = -2;
+			tmpblock14.position.x = -4;
+			tmpblock14.rotation.y = Math.PI/2;
+			scene.add(tmpblock14);
+
+			var tmpblock15 = basic_cube.clone();
+			tmpblock15.position.z = 4;
+			scene.add( tmpblock15 );
+
+			var tmpblock16 = tree_cube.clone();
+			tmpblock16.position.z = 4;
+			tmpblock16.position.x = 2;
+			scene.add( tmpblock16 );
+
+			// ---------------- REFLECTION EFFECT ----------------
+
+			const cubeRenderTarget = new THREE.WebGLCubeRenderTarget(reflectQuality, { generateMipmaps  :true});
+			var sphereGeo = new THREE.SphereGeometry(5, 32, 16);
+
+			mirrorCamera = new THREE.CubeCamera(0.1, 5000, cubeRenderTarget);
+			scene.add(mirrorCamera);
+
+			var mirrorMat = new THREE.MeshBasicMaterial({
+				envMap : mirrorCamera.renderTarget.texture
+			});
+
+			mirrorSphere = new THREE.Mesh(sphereGeo, mirrorMat);
+			mirrorSphere.position.set(8, 2, 1);
+
+			mirrorCamera.position.x = mirrorSphere.position.x;
+			mirrorCamera.position.y = mirrorSphere.position.y;
+			mirrorCamera.position.z = mirrorSphere.position.z;
+
+			scene.add(mirrorSphere);
+
+			// ---------------- REFRACT EFFECT ----------------
+
+			const refractRenderTarget = new THREE.WebGLCubeRenderTarget(refractQuality, {});
+
+			var geometry =  new THREE.TorusKnotGeometry(10, 3, 100, 16);
+
+			refractCamera =  new THREE.CubeCamera(0.1, 5000, refractRenderTarget);
+			scene.add(refractCamera);
+
+			var refractMat = new THREE.MeshBasicMaterial({
+				envMap : refractCamera.renderTarget.texture,
+				refractionRatio : 0.85,
+				reflectivity : 0.90
+			});
+
+			refractMesh = new THREE.Mesh(geometry, refractMat);
+			refractMesh.position.set(-3, 3 , -3);
+			refractMesh.scale.set(0.1, 0.1, 0.1);
+			scene.add(refractMesh);
+
+			refractCamera.position.x = refractMesh.position.x;
+			refractCamera.position.y = refractMesh.position.y;
+			refractCamera.position.z = refractMesh.position.z;
+
+
+			refractRenderTarget.texture.mapping  = THREE.CubeRefractionMapping;
+
+			is_Loaded = true;
+
+		}
+
+		/*
+		* 	##################
+		*
+		*	 	FUNCTION ONWINDOWRESIZE()
+		*		This function is called when the window is resized, update the camera projection to fit the new size
+		*
+		*	##################
+		*/
+		function onWindowResize()
+		{
+			camera.aspect = window.innerWidth / window.innerHeight;
+			camera.updateProjectionMatrix();
+
+			renderer.setSize( window.innerWidth, window.innerHeight );
+		}
+
+		init();
+
+	</script>
+
+</head>
+
+<body>
+
+
+	<button style="position : absolute; top : 0%; right: 0%; height : 100px;" id="idle" >IDLE ANIMATION</button>
+	<button style="position : absolute; bottom : 0%; right: 0%; height : 100px;" id="run" >RUN ANIMATION</button>
+
+</body>

@@ -1,0 +1,224 @@
+<head>
+
+	<meta name='viewport'  content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0' />
+
+	<style>
+		body { 	margin: 0; touch-action: none;
+			background-image: -webkit-gradient(linear, 0 0, 100% 100%, color-stop(0, #877fa8), color-stop(100%, #f9ae91));
+			background-image: -webkit-linear-gradient(135deg, #877fa8, #f9ae91);
+			background-image: -moz-linear-gradient(45deg, #877fa8, #f9ae91);
+			background-image: -ms-linear-gradient(45deg, #877fa8 0, #f9ae91 100%);
+			background-image: -o-linear-gradient(45deg, #877fa8, #f9ae91);
+			background-image: linear-gradient(135deg, #877fa8, #f9ae91);}
+		canvas { width: 100%; height: 100% ; touch-action: none;}
+
+	</style>
+
+	<script type="importmap">
+	    {
+	      "imports": {
+	        "three": "../js/build/three.module.js"
+	      }
+	    }
+	</script>
+
+	<script  type="module">
+
+	  import * as THREE from 'three';
+		import { GLTFLoader } from '../js/examples/jsm/loaders/GLTFLoader.js';
+		import { MapControls } from '../js/examples/jsm/controls/MapControls.js';
+		import { VRButton } from '../js/examples/jsm/webxr/VRButton.js';
+
+		/*
+		* 	--------------------------------------------------------------------------------
+		*
+		*	-------------------------------- GLOBAL VARIABLES --------------------------------
+		*
+		*	--------------------------------------------------------------------------------
+		*/
+
+		// Basic Threejs variables
+		var scene;
+		var camera;
+		var renderer;
+		var clock;
+		var controls;
+
+		var AnimMixer;
+
+		const frustumSize = 15;
+
+		var world;
+
+
+
+		function init()
+		{
+
+			clock = new THREE.Clock();
+			scene = new THREE.Scene();
+
+			// ---------------- RENDERER ----------------
+
+			renderer = new THREE.WebGLRenderer( { antialias : true, alpha : true  } );
+			renderer.setPixelRatio( window.devicePixelRatio * 1 );
+			renderer.setSize( window.innerWidth, window.innerHeight );
+			renderer.xr.enabled = true;
+			document.body.appendChild( renderer.domElement ); // we add the HTML element to the HTML page
+			document.body.appendChild( VRButton.createButton( renderer ) );
+
+			// ---------------- CAMERA ----------------
+			const aspect = window.innerWidth / window.innerHeight;
+			camera = new THREE.OrthographicCamera( frustumSize * aspect / - 2, frustumSize * aspect / 2, frustumSize / 2, frustumSize / - 2, 1, 10000 );
+
+			// ---------------- CAMERA CONTROLS ----------------
+			controls = new MapControls( camera, renderer.domElement );
+			controls.enableDamping = true; // an animation loop is required when either damping or auto-rotation are enabled
+			//controls.enablePan = false;
+			//controls.enableRotate = false;
+			controls.dampingFactor = 0.05;
+			controls.screenSpacePanning = false;
+			controls.minDistance = 2;
+			controls.maxDistance = 20;
+			controls.maxPolarAngle = Math.PI / 2;
+
+			// ---------------- CAMERA END ----------------
+
+			camera.position.set( -2000, 1300, 2000 );
+			camera.lookAt(new THREE.Vector3(0,3,0));
+			scene.add( camera );
+
+			// ---------------- LIGHTS ----------------
+
+			var ambientLight = new THREE.AmbientLight( 0xcccccc, 0.3 );
+			scene.add( ambientLight );
+
+
+			const spotLight = new THREE.SpotLight( 0xcccccc, 1.2 );
+			spotLight.position.set( -10, 10, -10 );
+			scene.add( spotLight );
+
+
+			const spotLight2 = new THREE.SpotLight( 0xcccccc, 1.2 );
+			spotLight2.position.set( -10, 10, 10 );
+			scene.add( spotLight2 );
+
+
+			// ---------------- CALLING LOADING AND INIT FUNCTIONS ----------------
+
+
+			var loader = new GLTFLoader();
+			loader.load( 'warehouse.glb', function ( gltf )
+			{
+
+
+				// ---------------- 3D MODEL ANIMATION MIXER----------------
+
+				//Setting up the animation mixer
+				AnimMixer= new THREE.AnimationMixer( gltf.scene );
+
+				//Anims
+				var Anim1 = gltf.animations[ 0] ;
+				var Anim2 = gltf.animations[ 1] ;
+				var Anim3 = gltf.animations[ 2] ;
+
+				Anim1.clampWhenFinished = true;
+				Anim2.clampWhenFinished = true;
+				Anim3.clampWhenFinished = true;
+
+				AnimMixer.clipAction( Anim1).play();
+				AnimMixer.clipAction( Anim2).play();
+				AnimMixer.clipAction( Anim3).play();
+
+
+
+				world = gltf.scene;
+				world.scale.set(0.2, 0.2, 0.2);
+				world.position.y = -3;
+
+				//console.log(gltf.animations);
+
+
+				for(var i = 0 ; i < world.children.length ; i++)
+				{
+
+						if(world.children[i].material)
+						{
+								//console.log(world.children[i].material);
+
+								if(world.children[i].material.transparent == true)
+								{
+									world.children[i].material.opacity = 0.2;
+								}
+						}
+				}
+
+				scene.add(world);
+
+			} );
+
+
+
+			// ---------------- EVENTS ----------------
+
+			window.addEventListener( 'resize', onWindowResize, false );
+
+			// ---------------- STARTING THE GAME MAIN LOOP ----------------
+
+			renderer.setAnimationLoop( function () // important for WebXR
+			{
+					render();
+			} );
+
+		}
+
+
+		function render()
+		{
+
+			var delta = clock.getDelta();  //get delta time between two frames
+
+
+			if( AnimMixer)
+			{
+				AnimMixer.update( delta ); 	// we are updating player animations , basing on elapsed time
+			}
+
+			controls.update();
+
+			renderer.render( scene, camera ); 	// We are rendering the 3D world
+		}
+
+
+		/*
+		* 	##################
+		*
+		*	 	FUNCTION ONWINDOWRESIZE()
+		*		This function is called when the window is resized, update the camera projection to fit the new size
+		*
+		*	##################
+		*/
+		function onWindowResize()
+		{
+			const aspect = window.innerWidth / window.innerHeight;
+
+			camera.left = - frustumSize * aspect / 2;
+			camera.right = frustumSize * aspect / 2;
+			camera.top = frustumSize / 2;
+			camera.bottom = - frustumSize / 2;
+
+			camera.updateProjectionMatrix();
+
+			renderer.setSize( window.innerWidth, window.innerHeight );
+		}
+
+		init();
+
+	</script>
+
+</head>
+
+<body>
+
+
+</body>

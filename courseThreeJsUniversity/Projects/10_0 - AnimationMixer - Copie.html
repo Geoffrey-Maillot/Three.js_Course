@@ -1,0 +1,211 @@
+<html>
+  <head>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0' />
+
+    <style>
+    body
+		{
+			margin: 0; touch-action: none;
+			background-image: -webkit-gradient(linear, 0 0, 100% 100%, color-stop(0, #877fa8), color-stop(100%, #f9ae91));
+			background-image: -webkit-linear-gradient(135deg, #877fa8, #f9ae91);
+			background-image: -moz-linear-gradient(45deg, #877fa8, #f9ae91);
+			background-image: -ms-linear-gradient(45deg, #877fa8 0, #f9ae91 100%);
+			background-image: -o-linear-gradient(45deg, #877fa8, #f9ae91);
+			background-image: linear-gradient(135deg, #877fa8, #f9ae91);
+		}
+
+        canvas  { height : 100%; width : 100%; }
+    </style>
+
+    <script type="importmap">
+        {
+          "imports": {
+            "three": "./js/build/three.module.js"
+          }
+        }
+    </script>
+
+    <script  type="module">
+
+      import * as THREE from 'three';
+      import { OrbitControls } from './js/examples/jsm/controls/OrbitControls.js';
+
+      import { GLTFLoader } from './js/examples/jsm/loaders/GLTFLoader.js';
+
+      var scene;
+      var renderer;
+      var camera;
+
+      var group;
+      var clock;
+
+      var controls;
+
+      var MyLight;
+      var MyLight_Helper;
+
+      var MainPlayer; // Mesh
+      var PlayerMixer; // Animationmixer
+
+      //Animations
+      var Anim_IDLE;
+      var Anim_Run;
+
+
+
+
+      function init()
+      {
+          clock = new THREE.Clock();
+          scene = new THREE.Scene();
+
+          renderer = new THREE.WebGLRenderer({antialias : true, alpha : true});
+          renderer.setPixelRatio(window.devicePixelRatio);
+          renderer.setSize(window.innerWidth, window.innerHeight);
+          renderer.setClearColor(0x2c3e50, 0);
+          renderer.shadowMap.enabled = true;
+          document.body.appendChild(renderer.domElement);
+
+
+          // ---- CAMERA ----
+
+          camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 40000 );
+          camera.lookAt( new THREE.Vector3(0, 0, 0) );
+          scene.add(camera);
+
+          // -------- CONTROLS --------
+
+          controls = new OrbitControls( camera, renderer.domElement );
+
+    			controls.minDistance = 400;
+    			controls.maxDistance = 100000;
+    			controls.dampingFactor = 0.05;
+    			controls.enableDamping = true;
+    			controls.maxPolarAngle = Math.PI / 2 - Math.PI / 10;
+    			controls.enablePan = true;
+    			controls.enableRotate = true;
+    			controls.enableZoom = true;
+    			controls.panSpeed = 1;
+    			controls.rotateSpeed = 2;
+    			controls.zoomSpeed = 1;
+
+    			controls.update();
+
+          // ------------------------
+
+          camera.position.set(0, 2000, 5000);
+
+          // --------------------------------
+
+          const planeGeo = new THREE.PlaneGeometry(10000, 10000);
+          const planeMat = new THREE.MeshPhysicalMaterial(
+          {
+              color: 0xffffff,
+              metalness : 0,
+              roughness : 1,
+              clearcoat : 1,
+              clearcoatRoughness : 0,
+              side: THREE.DoubleSide
+          });
+
+  				const floor = new THREE.Mesh(planeGeo, planeMat);
+  				floor.rotation.x = Math.PI * -0.5;
+          floor.receiveShadow = true;
+  				scene.add(floor);
+
+          const directionalLight = new THREE.DirectionalLight( 0xffffff, 0.6 );
+          directionalLight.position.set( - 1, 1, 1 );
+          scene.add( directionalLight );
+
+          var ambientLight = new THREE.AmbientLight(0xcccccc, 0.5);
+          scene.add(ambientLight);
+
+          MyLight = new THREE.SpotLight(0xffffff, 2, 20000, Math.PI / 4);
+          MyLight.position.z = 2000;
+          MyLight.castShadow = true;
+          MyLight.shadow.mapSize.width = 2048; // default is 512
+          MyLight.shadow.mapSize.width = 2048; // default is 512
+          scene.add(MyLight);
+
+          // 3D FILES
+
+          var GLTFLo = new GLTFLoader();
+
+          GLTFLo.load("Assets/Girl.glb", function(glb){
+
+            console.log(glb);
+
+            MainPlayer = glb.scene;
+            MainPlayer.scale.set(800, 800, 800);
+
+            for(var i = 0 ; i < MainPlayer.children[2].children.length ; i++)
+            {
+                MainPlayer.children[2].children[i].castShadow = true;
+            }
+
+            PlayerMixer = new THREE.AnimationMixer(MainPlayer);
+
+            //Animations
+            Anim_Run = glb.animations[1]; // run
+            Anim_IDLE = glb.animations[0]; //idle
+
+            PlayerMixer.clipAction(Anim_Run).play();
+
+            scene.add(MainPlayer);
+
+          });
+
+          var runbutton = document.getElementById("run").onclick = function() {
+
+              PlayerMixer.clipAction(Anim_Run).play();
+              PlayerMixer.clipAction(Anim_IDLE).stop();
+
+          };
+
+          var idlebutton = document.getElementById("idle").onclick = function() {
+
+            PlayerMixer.clipAction(Anim_IDLE).play();
+            PlayerMixer.clipAction(Anim_Run).stop();
+
+          };
+
+          render();
+      }
+
+      function render()
+      {
+
+          var delta = clock.getDelta();
+          var elapsed = clock.elapsedTime;
+
+          controls.update();
+
+          MyLight.position.x = Math.sin(elapsed) * 8000;
+          MyLight.position.z = Math.cos(elapsed) * 8000;
+          MyLight.position.y = Math.abs(Math.cos(elapsed / 4) * 8000) + 50;
+
+          MyLight.lookAt( new THREE.Vector3(0,0,));
+
+          if(PlayerMixer)
+          {
+            PlayerMixer.update(delta);
+          }
+
+
+          renderer.render(scene, camera);
+          requestAnimationFrame(render);
+      }
+
+      init();
+
+    </script>
+  </head>
+
+  <body>
+
+    <button style="position : absolute; top : 0%; right: 0%; height : 100px;" id="idle" >IDLE ANIMATION</button>
+    <button style="position : absolute; bottom : 0%; right: 0%; height : 100px;" id="run" >RUN ANIMATION</button>
+
+
+  </body>
+</html>

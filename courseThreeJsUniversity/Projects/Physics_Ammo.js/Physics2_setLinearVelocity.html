@@ -1,0 +1,352 @@
+<head>
+
+	<script src="../js/stats.min.js"></script>
+	<script src="../js/ammo.js"></script>
+
+	<meta name='viewport'  content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0' />
+
+	<style>
+		body
+		{
+				margin: 0; touch-action: none;
+
+				user-select: none;
+		  	-moz-user-select: none;
+		  	-khtml-user-select: none;
+		  	-webkit-user-select: none;
+		  	-o-user-select: none;
+		}
+
+		canvas { width: 100%; height: 100% ; touch-action: none;}
+
+	</style>
+
+	<script type="importmap">
+	    {
+	      "imports": {
+	        "three": "../js/build/three.module.js"
+	      }
+	    }
+	</script>
+
+	<script  type="module">
+
+	  import * as THREE from 'three';
+		import { OrbitControls } from '../js/examples/jsm/controls/OrbitControls.js';
+		import { GLTFLoader } from '../js/examples/jsm/loaders/GLTFLoader.js';
+
+		// Basic Threejs variables
+		var scene;
+		var camera;
+		var renderer;
+		var clock;
+
+		// Performance stats
+		var stats;
+
+		// main light
+		var light;
+
+		// Ammo.js
+		var physicsUniverse     = undefined;
+		var rigidBody_List 			= new Array();
+		var tmpTransformation 	= undefined;
+
+		var is_loaded = false;
+		var MeshesToLoad = new Array();
+
+		var positionX = 0;
+		var positionZ = 0;
+
+		var characterSpeed = 100;
+
+		Ammo().then( AmmoStart );
+
+		function AmmoStart()
+		{
+				tmpTransformation = new Ammo.btTransform();
+				initGraphicsUniverse();
+				initPhysicsUniverse();
+				render();
+		}
+
+		function initPhysicsUniverse()
+		{
+				var collisionConfiguration  = new Ammo.btDefaultCollisionConfiguration();
+				var dispatcher              = new Ammo.btCollisionDispatcher(collisionConfiguration);
+				var overlappingPairCache    = new Ammo.btDbvtBroadphase();
+				var solver                  = new Ammo.btSequentialImpulseConstraintSolver();
+
+				physicsUniverse = new Ammo.btDiscreteDynamicsWorld(dispatcher, overlappingPairCache, solver, collisionConfiguration);
+				physicsUniverse.setGravity( new Ammo.btVector3(0, -75, 0) );
+		}
+
+		function initGraphicsUniverse()
+		{
+
+				var background = 0x72645b;
+
+				clock = new THREE.Clock();
+				scene = new THREE.Scene();
+				scene.fog = new THREE.FogExp2(background, 0.0050);
+
+				// ---------------- RENDERER ----------------
+
+				renderer = new THREE.WebGLRenderer( { antialias : true } );
+				renderer.setPixelRatio( window.devicePixelRatio * 1  );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				renderer.setClearColor(background);
+				renderer.shadowMap.enabled = true;
+				document.body.appendChild( renderer.domElement );
+
+				// ---------------- CAMERA ----------------
+
+				camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 800 );
+				camera.position.set( 25, 50, 75 );
+				camera.lookAt(new THREE.Vector3(0,5,0));
+				scene.add( camera );
+
+				// ---------------- LIGHTS ----------------
+
+				scene.add( new THREE.AmbientLight( 0xcccccc, 0.5 ) );
+				scene.add( new THREE.HemisphereLight( 0x443333, 0x111122 ) );
+
+				light = new THREE.DirectionalLight(0xFFFFFFF, 1, 1000, Math.PI/6);
+				light.position.set(-20, 50, 20);
+				light.castShadow = true;
+				light.shadow.mapSize.width = 30000;
+				light.shadow.mapSize.height = 30000;
+				light.shadow.camera.near = 2;
+				light.shadow.camera.far = 20000;
+				light.shadow.camera.left = -2000;
+				light.shadow.camera.right = 2000;
+				light.shadow.camera.top = 2000;
+				light.shadow.camera.bottom = -2000;
+				scene.add(light);
+
+				// ---------------- EVENTS ----------------
+
+				window.addEventListener( 'resize', onWindowResize, false );
+
+				document.onkeydown = keyboardDown;
+				document.onkeyup = keyboardUp;
+
+				function keyboardDown(e)
+				{
+						e = e || window.event;
+
+						if( e.keyCode == '38' ) // up
+						{
+								positionZ = characterSpeed;
+						}
+						else if( e.keyCode == '40' ) //down
+						{
+ 								positionZ = -characterSpeed;
+						}
+						else if( e.keyCode == '37' ) // left
+						{
+								positionX = characterSpeed;
+						}
+						else if( e.keyCode == '39' ) // right
+						{
+								positionX = - characterSpeed;
+						}
+				}
+
+				function keyboardUp(e)
+				{
+						if( e.keyCode == '38' ) // up
+						{
+								positionZ = 0;
+						}
+						else if( e.keyCode == '40' ) //down
+						{
+								positionZ = 0;
+						}
+						else if( e.keyCode == '37' ) // left
+						{
+								positionX = 0;
+						}
+						else if( e.keyCode == '39' ) // right
+						{
+								positionX = 0;
+						}
+				}
+
+				// ---------------- PERFORMANCE STATS PLUGIN ----------------
+
+				stats = new Stats();
+				stats.showPanel( 0 ); // 0: fps, 1: ms, 2: mb, 3+: custom
+				document.body.appendChild( stats.dom );
+
+				// ---------------- FLOOR ----------------
+
+				const floorMaterial = new THREE.MeshPhysicalMaterial({ color  : 0x999999, metalness : 0, roughness : 1 });
+				const floor = new THREE.Mesh( new THREE.BoxGeometry(4000, 1, 4000) , floorMaterial);
+				floor.receiveShadow = true;
+				scene.add(floor);
+				MeshesToLoad["floor"] = floor;
+
+				// ---------------- CUBE ----------------
+
+				const cubeMat = new THREE.MeshPhysicalMaterial({ color  : 0xffffff, metalness : 0.5, roughness : 0, clearcoat : 1 })
+				const cubeMesh = new THREE.Mesh( new THREE.BoxGeometry(20, 20, 20), cubeMat);
+				cubeMesh.position.y = 10;
+				cubeMesh.castShadow = true;
+				scene.add(cubeMesh);
+				MeshesToLoad["cubeMesh"] = cubeMesh;
+
+				// DESK
+
+				var loader = new GLTFLoader();
+				loader.load( '../Assets/desk.glb', function ( gltf )
+				{
+						var desk = gltf.scene;
+						desk.scale.set(10,10,10);
+						desk.children[0].castShadow = true;
+						desk.position.y = -11;
+
+						var offsetY = new THREE.Object3D();
+						offsetY.add(desk);
+						scene.add(offsetY);
+
+						MeshesToLoad["desk"] = offsetY;
+				});
+		}
+
+		function createBoxShapeObject( mesh, scale, position, mass, rotation_q, friction, isCharacter )
+		{
+
+				var quaternion = undefined ;
+
+				if(rotation_q == null )
+				{
+					 quaternion = {x: 0, y: 0, z: 0, w:  1};
+				}
+				else
+				{
+					 quaternion = rotation_q;
+				}
+
+				// ----------------- Ammo.js -----------------
+
+				// Base Position & Rotation (Physics)
+				var transform = new Ammo.btTransform();
+				transform.setIdentity();
+				transform.setOrigin( new Ammo.btVector3( position.x, position.y, position.z ) );
+				transform.setRotation( new Ammo.btQuaternion( quaternion.x, quaternion.y, quaternion.z, quaternion.w ) );
+				var defaultMotionState = new Ammo.btDefaultMotionState(transform);
+
+				// Collision Shape
+				var structColShape = new Ammo.btBoxShape( new Ammo.btVector3( scale.x, scale.y, scale.z) );
+				structColShape.setMargin(0.05);
+
+				// Local Inertia
+				var localIn = new Ammo.btVector3(0, 0, 0);
+				structColShape.calculateLocalInertia(mass, localIn);
+
+				var RB_Info = new Ammo.btRigidBodyConstructionInfo(mass, defaultMotionState, structColShape, localIn);
+				var RB = new Ammo.btRigidBody(RB_Info);
+
+				if(friction)
+				{
+						RB.setFriction(friction);
+				}
+
+				if( isCharacter )
+				{
+						//Lock Y axis , for character controller
+						RB.setAngularFactor(0, 1, 0);
+				}
+
+				physicsUniverse.addRigidBody(RB);
+
+				mesh.userData.physicsBody = RB;
+				rigidBody_List.push(mesh);
+		}
+
+		function updatePhysicsUniverse( delta )
+		{
+				physicsUniverse.stepSimulation(delta, 10 );
+
+				for ( let i = 0; i < rigidBody_List.length; i++ )
+				{
+				    var graphics_object = rigidBody_List[i];
+						var physics_object = rigidBody_List[i].userData.physicsBody;
+
+						var motionstate = physics_object.getMotionState();
+						if(motionstate)
+						{
+								motionstate.getWorldTransform( tmpTransformation );
+								var new_position = tmpTransformation.getOrigin();
+								var new_rot = tmpTransformation.getRotation();
+
+								graphics_object.position.set(new_position.x(), new_position.y(), new_position.z() );
+								graphics_object.quaternion.set(new_rot.x(), new_rot.y(), new_rot.z(), new_rot.w() );
+
+						}
+				}
+		}
+
+		function checkLoaded()
+		{
+				if( MeshesToLoad["desk"] && MeshesToLoad["floor"] && MeshesToLoad["cubeMesh"] && physicsUniverse )
+				{
+						return true;
+				}
+
+				return false;
+		}
+
+
+		function render()
+		{
+				stats.begin();
+				var delta = clock.getDelta();
+
+				if( is_loaded == false )
+				{
+						if( checkLoaded() )
+						{
+								is_loaded = true;
+								// code init physics scene
+								createBoxShapeObject( MeshesToLoad["floor"], new THREE.Vector3(2000, 0.5, 2000), new THREE.Vector3(0, 0, 0), 0 );
+								createBoxShapeObject( MeshesToLoad["cubeMesh"], new THREE.Vector3(10, 10, 10), new THREE.Vector3(0, 100, 0), 1 );
+								createBoxShapeObject( MeshesToLoad["desk"], new THREE.Vector3(8.75, 11, 10.5), new THREE.Vector3(0, 50, 0), 1, null, 2, true );
+						}
+				}
+				else
+				{
+						// code
+						updatePhysicsUniverse(delta);
+
+						if( positionX != 0  || positionZ != 0 )
+						{
+							 MeshesToLoad["desk"].userData.physicsBody.activate();
+
+							 var curVel =  MeshesToLoad["desk"].userData.physicsBody.getLinearVelocity();
+							 curVel.setX( - positionX );
+							 curVel.setZ( - positionZ );
+							 MeshesToLoad["desk"].userData.physicsBody.setLinearVelocity(curVel);
+						}
+				}
+
+				renderer.render( scene, camera );
+				stats.end();
+				requestAnimationFrame( render );
+		}
+
+		function onWindowResize()
+		{
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+				renderer.setSize( window.innerWidth, window.innerHeight );
+		}
+
+	</script>
+
+</head>
+
+<body>
+
+</body>

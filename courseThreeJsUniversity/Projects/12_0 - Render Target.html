@@ -1,0 +1,238 @@
+<html>
+  <head>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0' />
+
+    <style>
+    body
+		{
+			margin: 0; touch-action: none;
+			background-image: -webkit-gradient(linear, 0 0, 100% 100%, color-stop(0, #877fa8), color-stop(100%, #f9ae91));
+			background-image: -webkit-linear-gradient(135deg, #877fa8, #f9ae91);
+			background-image: -moz-linear-gradient(45deg, #877fa8, #f9ae91);
+			background-image: -ms-linear-gradient(45deg, #877fa8 0, #f9ae91 100%);
+			background-image: -o-linear-gradient(45deg, #877fa8, #f9ae91);
+			background-image: linear-gradient(135deg, #877fa8, #f9ae91);
+		}
+
+        canvas  { height : 100%; width : 100%; }
+    </style>
+
+    <script type="importmap">
+        {
+          "imports": {
+            "three": "./js/build/three.module.js"
+          }
+        }
+    </script>
+
+    <script  type="module">
+
+      import * as THREE from 'three';
+      import { OrbitControls } from './js/examples/jsm/controls/OrbitControls.js';
+
+      import { RectAreaLightHelper } from './js/examples/jsm/helpers/RectAreaLightHelper.js';
+      import { RectAreaLightUniformsLib } from './js/examples/jsm/lights/RectAreaLightUniformsLib.js';
+
+
+      var scene;
+      var renderer;
+      var camera;
+
+      var group;
+      var clock;
+
+      var controls;
+
+      var MyLight;
+
+      var MyLight_Helper;
+
+      const renderTargetWidth = 500;
+      const renderTargetHeight = 500;
+      const renderTarget = new THREE.WebGLRenderTarget(renderTargetWidth,renderTargetHeight);
+
+      var renderTargetCam;
+      var renderTargetScene;
+      var renderTargetCube;
+
+      function init()
+      {
+          clock = new THREE.Clock();
+          scene = new THREE.Scene();
+
+          renderer = new THREE.WebGLRenderer({antialias : true, alpha : true});
+          renderer.setPixelRatio(window.devicePixelRatio);
+          renderer.setSize(window.innerWidth, window.innerHeight);
+          renderer.setClearColor(0x2c3e50, 0);
+          renderer.shadowMap.enabled = true;
+          document.body.appendChild(renderer.domElement);
+
+          RectAreaLightUniformsLib.init();
+
+          // ---- CAMERA ----
+
+          camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 40000 );
+          camera.lookAt( new THREE.Vector3(0, 0, 0) );
+          scene.add(camera);
+
+          controls = new OrbitControls( camera, renderer.domElement );
+
+    			controls.minDistance = 400;
+    			controls.maxDistance = 100000;
+    			controls.dampingFactor = 0.05;
+    			controls.enableDamping = true;
+    			controls.maxPolarAngle = Math.PI / 2 - Math.PI / 10;
+    			controls.enablePan = true;
+    			controls.enableRotate = true;
+    			controls.enableZoom = true;
+    			controls.panSpeed = 1;
+    			controls.rotateSpeed = 2;
+    			controls.zoomSpeed = 1;
+
+    			controls.update();
+
+          camera.position.set(0, 2000, 5000);
+
+          // ---------------RENDER TARGET -----------------
+
+            var rtFOV = 75;
+            var rtAspect = renderTargetWidth/ renderTargetHeight;
+            var rtNear = 0.1;
+            var rtFar = 5;
+
+            renderTargetCam = new THREE.PerspectiveCamera(rtFOV, rtAspect, rtNear, rtFar);
+            renderTargetCam.position.z = 2;
+
+            renderTargetScene = new THREE.Scene();
+            renderTargetScene.background = new THREE.Color(0x2c3e50);
+
+            const light = new THREE.DirectionalLight(0xffffff, 1);
+            light.position.set(-1, 2, 4);
+            renderTargetScene.add(light);
+
+            var tmpGeo = new THREE.BoxGeometry(1,1,1);
+            var tmpMap = new THREE.MeshPhongMaterial({color : 0xffffff});
+
+            renderTargetCube = new THREE.Mesh(tmpGeo, tmpMap);
+            renderTargetScene.add(renderTargetCube);
+
+
+          // --------------------------------
+
+          const planeGeo = new THREE.PlaneGeometry(10000, 10000);
+          const planeMat = new THREE.MeshPhysicalMaterial(
+          {
+              color: 0xffffff,
+              metalness : 0,
+              roughness : 1,
+              clearcoat : 1,
+              clearcoatRoughness : 0,
+              side: THREE.DoubleSide,
+              map : renderTarget.texture
+
+          });
+
+  				const floor = new THREE.Mesh(planeGeo, planeMat);
+  				floor.rotation.x = Math.PI * -0.5;
+          floor.receiveShadow = true;
+  				scene.add(floor);
+
+          var ambientLight = new THREE.AmbientLight(0xcccccc, 1);
+          scene.add(ambientLight);
+
+          MyLight = new THREE.RectAreaLight(0xc0392b, 4, 300000, 2000);
+          MyLight.position.y = 2000;
+          scene.add(MyLight);
+
+          var MyLight2 = new THREE.RectAreaLight(0xf1c40f, 4, 300000, 2000);
+          MyLight2.position.y = 4000;
+          MyLight.add(MyLight2);
+
+          var MyLight3 = new THREE.RectAreaLight(0x2980b9, 4, 300000, 2000);
+          MyLight3.position.y = 8000;
+          MyLight.add(MyLight3);
+
+
+          var spotlight = new THREE.SpotLight(0xc0392b, 1, 20000, Math.PI / 4);
+          spotlight.position.z = 2000;
+          spotlight.castShadow = true;
+          spotlight.shadow.mapSize.width = 2048; // default is 512
+          spotlight.shadow.mapSize.height = 2048; // default is 512
+          MyLight.add(spotlight);
+
+          var BlockGeo = new THREE.BoxGeometry(500, 1000, 500);
+
+          //var Geo  = new THREE.TorusKnotGeometry(1000, 300, 300, 300, 3, 4);
+          var Geo  = new THREE.BoxGeometry(2500, 2500, 2500);
+
+          const meshMaterial = new THREE.MeshPhysicalMaterial(
+          {
+              color: 0xffffff,
+              metalness : 0.25,
+              roughness : 0,
+              clearcoat : 1,
+              clearcoatRoughness : 0
+
+          });
+
+    			var mesh = new THREE.Mesh( Geo, meshMaterial ) ;
+          mesh.position.y = 1800;
+          mesh.castShadow = true;
+    			scene.add( mesh );
+
+          var block1 = new THREE.Mesh(BlockGeo, meshMaterial );
+          block1.position.set(4500, 500, 4500);
+          block1.castShadow = true;
+          scene.add(block1);
+
+          var block2 = new THREE.Mesh(BlockGeo, meshMaterial );
+          block2.position.set(-4500, 500, 4500);
+          block2.castShadow = true;
+          scene.add(block2);
+
+          var block3 = new THREE.Mesh(BlockGeo, meshMaterial );
+          block3.position.set(-4500, 500, -4500);
+          block3.castShadow = true;
+          scene.add(block3);
+
+          var block4 = new THREE.Mesh(BlockGeo, meshMaterial );
+          block4.position.set(4500, 500, -4500);
+          block4.castShadow = true;
+          scene.add(block4);
+
+
+          render();
+      }
+
+      function render()
+      {
+
+          var delta = clock.getDelta();
+          var elapsed = clock.elapsedTime;
+
+          controls.update();
+
+          MyLight.position.x = Math.sin(elapsed) * 8000;
+          MyLight.position.z = Math.cos(elapsed) * 8000;
+          MyLight.position.y = Math.abs(Math.cos(elapsed / 4) * 8000) + 50;
+
+          MyLight.lookAt( new THREE.Vector3(0,0,));
+
+          renderTargetCube.rotation.y += 0.02;
+          renderTargetCube.rotation.x += 0.01;
+
+          renderer.setRenderTarget(renderTarget);
+          renderer.render(renderTargetScene, renderTargetCam);
+          renderer.setRenderTarget(null);
+
+          renderer.render(scene, camera);
+          requestAnimationFrame(render);
+      }
+
+      init();
+
+    </script>
+  </head>
+
+  <body></body>
+</html>

@@ -1,0 +1,216 @@
+<head>
+
+	<script src="../js/stats.min.js"></script>
+	<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0' />
+
+	<style>
+		body { margin: 0; touch-action: none;}
+		canvas { width: 100%; height: 100% ; touch-action: none;}
+
+	</style>
+
+	<script type="importmap">
+			{
+				"imports": {
+					"three": "../js/build/three.module.js"
+				}
+			}
+	</script>
+
+	<script  type="module">
+
+		import * as THREE from 'three';
+
+		import { OrbitControls } from '../js/examples/jsm/controls/OrbitControls.js';
+
+		import { RectAreaLightHelper } from '../js/examples/jsm/helpers/RectAreaLightHelper.js';
+		import { RectAreaLightUniformsLib } from '../js/examples/jsm/lights/RectAreaLightUniformsLib.js';
+
+		/*
+		* 	--------------------------------------------------------------------------------
+		*
+		*	-------------------------------- VARIABLES --------------------------------
+		*
+		*	--------------------------------------------------------------------------------
+		*/
+
+		// Basic Threejs variables
+		var scene;
+		var camera;
+		var renderer;
+		var clock;
+
+		var controls;
+
+		// Performance stats
+		var stats;
+
+		var is_Loaded = false;
+
+
+		/*
+		* 	##################
+		*
+		*	 	FUNCTION INIT()
+		*		This function is the entry point of our javascript application.
+		*		This function in creating all the basic settings like scene, camera, renderer.
+		*
+		*	##################
+		*/
+		function init()
+		{
+
+			/*
+			*
+			*	We are defining the main engine variables.
+			*	clock - to track elapsed time
+			*	scene - where 3D objects are diplayed
+			*	renderer - the threejs 3D display engine
+			*	lights - to light up our scene
+			*
+			*/
+
+			clock = new THREE.Clock();
+			scene = new THREE.Scene();
+
+			// ---------------- RENDERER ----------------
+
+			renderer = new THREE.WebGLRenderer( { antialias : true } );
+			renderer.setPixelRatio( window.devicePixelRatio  );
+			renderer.setSize( window.innerWidth, window.innerHeight );
+			renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
+			document.body.appendChild( renderer.domElement );  // we add the HTML element to the HTML page
+
+			// ---------------- CAMERA ----------------
+
+			camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 10000 );
+
+			scene.add( camera );
+
+			controls = new OrbitControls( camera, renderer.domElement );
+
+			controls.minDistance = 25;
+			controls.maxDistance = 100;
+			controls.dampingFactor = 0.1;
+			controls.enableDamping = true;
+			controls.panSpeed = 1;
+			controls.rotateSpeed = 2;
+			controls.zoomSpeed = 1;
+			controls.autoRotate = true;
+
+			controls.update();
+
+			camera.position.set( 0, 20, -30 );
+			camera.lookAt(0,20,0);
+
+			// ---------------- LIGHTS ----------------
+
+			var ambientLight = new THREE.AmbientLight( 0xcccccc, 1 );
+			scene.add( ambientLight );
+
+			const directionalLight = new THREE.DirectionalLight( 0xffffff, 1 );
+			directionalLight.position.set(  1, 1, -1 );
+			scene.add( directionalLight );
+
+			const pointLight = new THREE.PointLight( 0xff6666, 3 );
+			directionalLight.position.set(  0, 1, 0 );
+			scene.add( directionalLight );
+
+			// ---------------- PERFORMANCE STATS PLUGIN ----------------
+
+			stats = new Stats();
+			stats.showPanel( 0 ); // 0: fps, 1: ms, 2: mb, 3+: custom
+			document.body.appendChild( stats.dom );
+
+
+			// ---------------- EVENTS ----------------
+
+			window.addEventListener( 'resize', onWindowResize, false );
+
+			// ---------------- STARTING THE GAME MAIN LOOP ----------------
+
+			render();
+		}
+
+
+		/*
+		* 	##################
+		*
+		*	 	FUNCTION RENDER()
+		*		This function is the main loop of our ThreeJS application.
+		*		This function is used for all the works needed to be done every tick.
+		*
+		*	##################
+		*/
+		function render()
+		{
+			stats.begin();  										//performance stats
+
+			var delta = clock.getDelta();  			//get delta time between two frames
+			var elapsed = clock.elapsedTime;  	//get elapsed time
+
+
+			if( is_Loaded == false)
+			{
+					is_Loaded = true;
+					InitMap();
+			}
+			else
+			{
+				// Tick tasks are there
+				controls.update();
+			}
+
+			renderer.render( scene, camera ); 	// We are rendering the 3D world
+			stats.end(); 												// stats , fps ratio ect...
+			requestAnimationFrame( render );		// we are calling render() again,  to loop
+		}
+
+		/*
+		* 	##################
+		*
+		*	 	FUNCTION INITMAP()
+		*
+		*	##################
+		*/
+		function InitMap()
+		{
+
+				const loader = new THREE.TextureLoader();
+				var texture360 = loader.load("../Assets/warehouse360.jpg");
+				texture360.mapping = THREE.EquirectangularReflectionMapping;
+
+				scene.background = texture360;
+
+				const geometry = new THREE.IcosahedronGeometry( 20, 15 );
+				var sphereMaterial = new THREE.MeshLambertMaterial( { envMap : texture360 } );
+				var sphereMesh = new THREE.Mesh( geometry, sphereMaterial );
+				scene.add( sphereMesh );
+
+		}
+
+		/*
+		* 	##################
+		*
+		*	 	FUNCTION ONWINDOWRESIZE()
+		*		This function is called when the window is resized, update the camera projection to fit the new size
+		*
+		*	##################
+		*/
+		function onWindowResize()
+		{
+			camera.aspect = window.innerWidth / window.innerHeight;
+			camera.updateProjectionMatrix();
+
+			renderer.setSize( window.innerWidth, window.innerHeight );
+		}
+
+		init();
+
+	</script>
+
+</head>
+
+<body>
+
+</body>

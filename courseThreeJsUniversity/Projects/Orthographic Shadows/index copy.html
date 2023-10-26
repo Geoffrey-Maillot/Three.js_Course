@@ -1,0 +1,300 @@
+<head>
+	<script src="../js/stats.min.js"></script>
+
+	<meta  name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0' />
+
+	<style>
+		body { margin: 0; touch-action: none;}
+		canvas { width: 100%; height: 100% ; touch-action: none;}
+		#postprocessButton{position : absolute;right : 0px;top : 0%;font-family: roboto-font, sans-serif;font-size : 1.5em;min-height : 50px;}
+	</style>
+
+	<script type="importmap">
+	    {
+	      "imports": {
+	        "three": "../js/build/three.module.js"
+	      }
+	    }
+	</script>
+
+	<script  type="module">
+
+	  import * as THREE from 'three';
+		import { EffectComposer } from '../js/examples/jsm/postprocessing/EffectComposer.js';
+		import { RenderPass } from '../js/examples/jsm/postprocessing/RenderPass.js';
+		import { UnrealBloomPass } from '../js/examples/jsm/postprocessing/UnrealBloomPass.js';
+
+		/*
+		* 	--------------------------------------------------------------------------------
+		*
+		*	-------------------------------- GLOBAL VARIABLES --------------------------------
+		*
+		*	--------------------------------------------------------------------------------
+		*/
+
+		// Basic Threejs variables
+		var scene;
+		var camera;
+		var renderer;
+		var clock;
+
+		// Performance stats
+		var stats;
+
+		// Global variables for lights
+		var light;
+		var light2;
+
+		// Boolean controled by button - to toggle postprocessing
+		var is_postprocess_enabled = false;
+
+		//Postprocessing global variables
+		var composer, bloomPass;
+
+
+		/*
+		* 	##################
+		*
+		*	 	FUNCTION TogglePostProcessing()
+		*		This function is used to siwtch ON/OFF the postprocessing UnrealBloomPass effect.
+		*
+		* 	##################
+		*/
+		function TogglePostProcessing()
+		{
+			if(is_postprocess_enabled == false)
+			{
+				is_postprocess_enabled = true;
+				composer.addPass( bloomPass ); // we are siwtching ON the UnrealBloomPass effect.
+			}
+			else
+			{
+				is_postprocess_enabled = false;
+				composer.removePass( bloomPass ); // we are siwtching OFF the UnrealBloomPass effect.
+			}
+
+		}
+
+		/*
+		* 	##################
+		*
+		*	 	FUNCTION createCubes()
+		*		This function is creating in the scene 4 cubes at a certain distance from the center of the map.
+		*
+		*		Parameter 1 : the distance between cubes and the center of the map
+		*
+		* 	##################
+		*/
+		function createCubes( center_distance )
+		{
+			//CUBE 1
+			const cubeGeo = new THREE.BoxGeometry(1, 1, 5);
+			const cubeMat = new THREE.MeshPhongMaterial({color: '#555555' , emissive  :"#333333"});
+			const meshcube = new THREE.Mesh(cubeGeo, cubeMat);
+			meshcube.castShadow = true;
+
+			//CUBE 1
+			var meshcube1 = meshcube.clone();
+			meshcube1.position.set(center_distance, 0, 1);
+			scene.add(meshcube1);
+
+			//CUBE 2
+			var meshcube2 = meshcube.clone();
+			meshcube2.position.set(0, center_distance, 1);
+			scene.add(meshcube2);
+
+			//CUBE 3
+			var meshcube3 = meshcube.clone();
+			meshcube3.position.set(0, -center_distance, 1);
+			scene.add(meshcube3);
+
+			//CUBE 4
+			var meshcube4 = meshcube.clone();
+			meshcube4.position.set(-center_distance, 0, 1);
+			scene.add(meshcube4);
+		}
+
+		/*
+		* 	##################
+		*
+		*	 	FUNCTION INIT()
+		*		This function is the entry point of our javascript application.
+		*		This function in creating all the basic settings like scene, camera, renderer.
+		*		This function is calling all the loading functions, and defining the main game render loop.
+		*
+		*	##################
+		*/
+		function init()
+		{
+			/*
+			*
+			*	We are defining the main engine variables.
+			*	clock - to track elapsed time
+			*	scene - where 3D objects are diplayed
+			*	renderer - the threejs 3D display engine
+			*	lights - to light up our scene
+			*	orthographic camera
+			*
+			*
+			*	Calling the meshes creation functions, events, and starting the render loop.
+			*
+			*/
+
+			clock = new THREE.Clock();
+			scene = new THREE.Scene();
+
+			// ---------------- RENDERER ----------------
+
+			renderer = new THREE.WebGLRenderer( { antialias : true } );
+			renderer.setPixelRatio( window.devicePixelRatio  );
+			renderer.setSize( window.innerWidth, window.innerHeight );
+			renderer.setClearColor(0x333333, 1.0);
+			renderer.shadowMap.enabled = true;
+			renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
+			document.body.appendChild( renderer.domElement );
+
+			// ---------------- ORTHOGRAPHIC CAMERA ----------------
+
+			camera = new THREE.OrthographicCamera(
+				window.innerWidth / - 100,
+				window.innerWidth / 100,
+				window.innerHeight / 100,
+				window.innerHeight / -100,
+				- 300,
+				500);
+
+			camera.position.set( 0, 0, 10 );
+			camera.lookAt(new THREE.Vector3(0,0,0));
+			scene.add( camera );
+
+			// ---------------- EVENTS ----------------
+
+			window.addEventListener( 'resize', onWindowResize, false );
+			document.getElementById('postprocessButton').onclick = TogglePostProcessing;
+
+			// ---------------- PERFORMANCE STATS PLUGIN ----------------
+
+			stats = new Stats();
+			stats.showPanel( 0 ); // 0: fps, 1: ms, 2: mb, 3+: custom
+			document.body.appendChild( stats.dom );
+
+
+			// ---------------- 3D OBJECTS ----------------
+
+			//FLOOR
+			const planeSize = 100;
+
+			const planeGeo = new THREE.PlaneGeometry(planeSize, planeSize);
+			const planeMat = new THREE.MeshPhongMaterial({color : 0XEEEEEE ,side: THREE.DoubleSide});
+			const mesh = new THREE.Mesh(planeGeo, planeMat);
+			mesh.receiveShadow = true;
+			scene.add(mesh);
+
+			//SPHERE
+
+			const sphereGeo = new THREE.SphereGeometry(1, 32, 32);
+			const sphereMat = new THREE.MeshPhongMaterial({color: '#FFFFFF', emissive :'#FFFFFF' });
+			const meshsphere = new THREE.Mesh(sphereGeo, sphereMat);
+			meshsphere.castShadow = true;
+			meshsphere.position.set(0, 0, 2);
+
+			//CUBES
+			createCubes(3);
+			createCubes(9);
+			createCubes(15);
+
+			// ---------------- LIGHTS ----------------
+
+			//POINTLIGHT
+			const color = 0xFFFFFF;
+			const intensity = 1;
+			light = new THREE.PointLight(color, intensity);
+			light.castShadow = true;
+			light.position.set(0, 0, 1);
+			light.add(meshsphere);
+			scene.add(light);
+
+			//POINTLIGHT 2
+			light2 = light.clone();
+			scene.add(light2);
+
+			// ----------------POSTPROCESSING ----------------
+
+			//postprocessing
+			bloomPass = new UnrealBloomPass(
+			new THREE.Vector2( window.innerWidth, window.innerHeight ), 	// resolution
+			1.5,																// strength
+			0.4,															// radius
+			0.85 );															//threshold
+
+			composer = new EffectComposer( renderer );
+			composer.addPass( new RenderPass( scene, camera ) );
+
+			// ---------------- STARTING THE GAME MAIN LOOP ----------------
+
+			render();
+
+		}
+
+		/*
+		* 	##################
+		*
+		*	 	FUNCTION RENDER()
+		*		This function is the main loop of our ThreeJS application.
+		*		This function is used for all the works needed to be done every game tick.
+		*
+		*		1) stats update ( fps ect)
+		*		2) Update ligts positions
+		*		3) render the 3D world
+		*		4) calling itself - that's how the "render loop" works as an endless loop
+		*
+		*	##################
+		*/
+
+		function render()
+		{
+			stats.begin();
+
+			var delta = clock.getDelta();
+			var elapsed = clock.elapsedTime;
+
+			light.position.x = 12 * Math.cos(elapsed/4) ;
+			light.position.y = 6 * Math.sin(elapsed/4) ;
+
+			light2.position.x = 1 * Math.cos(elapsed * 3) ;
+			light2.position.y = 1 * Math.sin(elapsed * 3) ;
+
+
+			camera.position.x = light.position.x
+			camera.position.y = light.position.y
+
+			composer.render( scene, camera );
+			stats.end();
+			requestAnimationFrame( render );
+		}
+
+		/*
+		* 	##################
+		*
+		*	 	FUNCTION ONWINDOWRESIZE()
+		*		This function is called when the window is resized, update the camera projection to fit the new size
+		*
+		*	##################
+		*/
+		function onWindowResize()
+		{
+			camera.aspect = window.innerWidth / window.innerHeight;
+			camera.updateProjectionMatrix();
+			renderer.setSize( window.innerWidth, window.innerHeight );
+		}
+
+		init();
+
+	</script>
+
+</head>
+
+<body>
+
+	<button id="postprocessButton">Toggle PostProcessing</button>
+</body>

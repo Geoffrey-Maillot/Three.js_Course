@@ -1,0 +1,170 @@
+<head>
+
+	<script src="../js/stats.min.js"></script>
+	<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0' />
+
+	<style>
+		body
+		{
+			margin: 0; touch-action: none;
+			background-image: -webkit-gradient(linear, 0 0, 100% 100%, color-stop(0, #877fa8), color-stop(100%, #f9ae91));
+			background-image: -webkit-linear-gradient(135deg, #877fa8, #f9ae91);
+			background-image: -moz-linear-gradient(45deg, #877fa8, #f9ae91);
+			background-image: -ms-linear-gradient(45deg, #877fa8 0, #f9ae91 100%);
+			background-image: -o-linear-gradient(45deg, #877fa8, #f9ae91);
+			background-image: linear-gradient(135deg, #877fa8, #f9ae91);
+		}
+
+		canvas { width: 100%; height: 100% ; touch-action: none;}
+
+	</style>
+
+	<script type="importmap">
+	    {
+	      "imports": {
+	        "three": "../js/build/three.module.js"
+	      }
+	    }
+	</script>
+
+	<script  type="module">
+
+	  import * as THREE from 'three';
+		import { MapControls } from '../js/examples/jsm/controls/MapControls.js';
+
+
+
+		/*
+		* 	--------------------------------------------------------------------------------
+		*
+		*	-------------------------------- GLOBAL VARIABLES --------------------------------
+		*
+		*	--------------------------------------------------------------------------------
+		*/
+
+		// Basic Threejs variables
+		var scene;
+		var camera;
+		var renderer;
+		var clock;
+		var controls;
+
+
+		// Performance stats
+		var stats;
+
+		function init()
+		{
+
+			clock = new THREE.Clock();
+			scene = new THREE.Scene();
+
+			// ---------------- RENDERER ----------------
+			renderer = new THREE.WebGLRenderer( { antialias : true ,  alpha: true} );
+			renderer.setPixelRatio( window.devicePixelRatio  );
+			renderer.setSize( window.innerWidth, window.innerHeight );
+			renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
+			document.body.appendChild( renderer.domElement );  // we add the HTML element to the HTML page
+
+			// ---------------- CAMERA ----------------
+			const aspect = window.innerWidth / window.innerHeight;
+			const frustumSize = 12;
+			camera = new THREE.OrthographicCamera( frustumSize * aspect / - 2, frustumSize * aspect / 2, frustumSize / 2, frustumSize / - 2, 1, 1000 );
+
+			camera.position.set( -50, 50, -50 );
+			camera.lookAt(new THREE.Vector3(0,0,0));
+			scene.add( camera );
+
+			// ---------------- CAMERA CONTROLS ----------------
+			controls = new MapControls( camera, renderer.domElement );
+			controls.enableDamping = true; // an animation loop is required when either damping or auto-rotation are enabled
+			controls.dampingFactor = 0.05;
+			controls.screenSpacePanning = false;
+			controls.minDistance = 2;
+			controls.maxDistance = 20;
+			controls.maxPolarAngle = Math.PI / 2;
+
+
+			// ---------------- LIGHTS ----------------
+			var ambientLight = new THREE.AmbientLight( 0xcccccc, 0.2 );
+			scene.add( ambientLight );
+
+
+			const spotLight = new THREE.SpotLight( 0xcccccc, 2 );
+			spotLight.position.set( -50, 150, -100 );
+			scene.add( spotLight );
+
+
+			// ---------------- TEXTURE ----------------
+			const loader = new THREE.TextureLoader();
+			loader.load('pixel_art.png', (texture_linear) => {
+
+					texture_linear.magFilter = THREE.LinearFilter;
+
+					const material = new THREE.MeshPhongMaterial(
+					{
+						map: texture_linear,
+					});
+
+					// ---------------- 3D CUBE ----------------
+					const geometry = new THREE.BoxGeometry( 2, 2, 2 );
+					var cube = new THREE.Mesh( geometry, material );
+					cube.position.x = 1.25;
+					cube.position.z = -1.25;
+					scene.add( cube );
+			});
+
+			loader.load('pixel_art.png', (texture_nearest) => {
+
+					texture_nearest.magFilter = THREE.NearestFilter;
+
+					const material = new THREE.MeshPhongMaterial(
+					{
+						map: texture_nearest,
+					});
+
+					// ---------------- 3D CUBE ----------------
+					const geometry = new THREE.BoxGeometry( 2, 2, 2 );
+					var cube = new THREE.Mesh( geometry, material );
+					cube.position.x = -1.25;
+					cube.position.z = 1.25;
+					scene.add( cube );
+			});
+
+
+
+			// ---------------- PERFORMANCE STATS PLUGIN ----------------
+			stats = new Stats();
+			stats.showPanel( 0 ); // 0: fps, 1: ms, 2: mb, 3+: custom
+			document.body.appendChild( stats.dom );
+
+
+			// ---------------- STARTING THE GAME MAIN LOOP ----------------
+			render();
+		}
+
+
+
+		function render()
+		{
+			stats.begin();										//performance stats
+
+			var delta = clock.getDelta();			//get delta time between two frames
+			var elapsed = clock.elapsedTime;	//get elapsed time
+
+
+			controls.update(); // only required if controls.enableDamping = true, or if controls.autoRotate = true
+			renderer.render( scene, camera ); 	// We are rendering the 3D world
+			stats.end(); 						// stats , fps ratio ect...
+			requestAnimationFrame( render );	// we are calling render() again,  to loop
+		}
+
+
+		init();
+
+	</script>
+
+</head>
+
+<body>
+</body>

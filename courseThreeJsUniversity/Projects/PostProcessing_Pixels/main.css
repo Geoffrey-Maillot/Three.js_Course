@@ -1,0 +1,45 @@
+body { margin: 0; }
+canvas { width: 100%; height: 100% }
+
+#footer
+{
+
+  background-color: black;
+  opacity: 0.8;
+  width : 90%;
+  height : 10%;
+
+  bottom: 5%;
+  left : 5%;
+
+  border-radius: 6px;
+
+  position : absolute;
+
+
+}
+
+.flexparent
+{
+  display : flex;
+  height : 100%;
+}
+
+.child
+{
+  flex-grow: 1;
+  color : white;
+  text-align: center;
+  height : 100%;
+  padding : 10px;
+
+  box-sizing: border-box
+
+}
+
+button
+{
+    height : 100%;
+    width : 90%;
+    font-size: 1.2em;
+}

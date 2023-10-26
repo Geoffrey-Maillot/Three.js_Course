@@ -1,0 +1,284 @@
+<head>
+
+	<meta name='viewport'  content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0' />
+
+	<style>
+		body { 	margin: 0; touch-action: none;
+			background-image: -webkit-gradient(linear, 0 0, 100% 100%, color-stop(0, #877fa8), color-stop(100%, #f9ae91));
+			background-image: -webkit-linear-gradient(135deg, #877fa8, #f9ae91);
+			background-image: -moz-linear-gradient(45deg, #877fa8, #f9ae91);
+			background-image: -ms-linear-gradient(45deg, #877fa8 0, #f9ae91 100%);
+			background-image: -o-linear-gradient(45deg, #877fa8, #f9ae91);
+			background-image: linear-gradient(135deg, #877fa8, #f9ae91);}
+		canvas { width: 100%; height: 100% ; touch-action: none;}
+
+		@font-face
+		{
+		  font-family: roboto-font;
+		  src: url(../fonts/Roboto-Thin.ttf);
+		}
+	</style>
+
+	<script type="importmap">
+	    {
+	      "imports": {
+	        "three": "../js/build/three.module.js"
+	      }
+	    }
+	</script>
+
+	<script  type="module">
+
+	  import * as THREE from 'three';
+		import { GLTFLoader } from '../js/examples/jsm/loaders/GLTFLoader.js';
+
+		import { MapControls } from '../js/examples/jsm/controls/MapControls.js';
+
+		/*
+		* 	--------------------------------------------------------------------------------
+		*
+		*	-------------------------------- GLOBAL VARIABLES --------------------------------
+		*
+		*	--------------------------------------------------------------------------------
+		*/
+
+		// Basic Threejs variables
+		var scene;
+		var camera;
+		var renderer;
+		var clock;
+		var controls;
+
+		var AnimMixer = undefined;
+		var girlmixer = undefined;
+		var girl = undefined;
+
+		// Boolean - True if every 3D object is loaded and ready to use
+		var is_Loaded 			= false;
+
+		const frustumSize = 15;
+
+		var world;
+
+		function init()
+		{
+
+			clock = new THREE.Clock();
+			scene = new THREE.Scene();
+
+			// ---------------- RENDERER ----------------
+
+			renderer = new THREE.WebGLRenderer( { antialias : true, alpha : true  } );
+			renderer.setPixelRatio( window.devicePixelRatio * 1 );
+			renderer.setSize( window.innerWidth, window.innerHeight );
+			document.body.appendChild( renderer.domElement ); // we add the HTML element to the HTML page
+
+			// ---------------- CAMERA ----------------
+			const aspect = window.innerWidth / window.innerHeight;
+			camera = new THREE.OrthographicCamera( frustumSize * aspect / - 2, frustumSize * aspect / 2, frustumSize / 2, frustumSize / - 2, 1, 10000 );
+
+			// ---------------- CAMERA CONTROLS ----------------
+			controls = new MapControls( camera, renderer.domElement );
+			controls.enableDamping = true; // an animation loop is required when either damping or auto-rotation are enabled
+			//controls.enablePan = false;
+			controls.enableRotate = false;
+			controls.dampingFactor = 0.05;
+			controls.screenSpacePanning = false;
+
+			// ---------------- CAMERA END ----------------
+
+			camera.position.set( 2000, 1300, -2000 );
+			camera.lookAt(new THREE.Vector3(0,3,0));
+			scene.add( camera );
+
+			// ---------------- WHITE GRID HELPER ----------------
+
+			// ---------------- LIGHTS ----------------
+
+			var ambientLight = new THREE.AmbientLight( 0xcccccc, 0.75 );
+			scene.add( ambientLight );
+
+			const spotLight = new THREE.SpotLight( 0xcccccc, 1.2 );
+			spotLight.position.set( -10, 10, -10 );
+			scene.add( spotLight );
+
+
+			const spotLight2 = new THREE.SpotLight( 0xcccccc, 1.2 );
+			spotLight2.position.set( -10, 10, 10 );
+			scene.add( spotLight2 );
+
+
+			// ---------------- CALLING LOADING AND INIT FUNCTIONS ----------------
+
+
+			var loader = new GLTFLoader();
+			loader.load( 'station_anim.glb', function ( gltf )
+			{
+
+				gltf.scene.traverse( function( object )
+				{
+
+					    object.frustumCulled = false;
+
+				} );
+
+				// ---------------- 3D MODEL ANIMATION MIXER----------------
+
+				//Setting up the animation mixer
+				AnimMixer= new THREE.AnimationMixer( gltf.scene );
+
+				//Anims
+				var Anim1 = gltf.animations[ 0] ; // first animation
+
+				Anim1.clampWhenFinished = true;
+
+				AnimMixer.clipAction( Anim1).play();
+
+				world = gltf.scene;
+				world.scale.set(0.2, 0.2, 0.2);
+				world.position.y = -3.8;
+
+
+				scene.add(world);
+
+			} );
+
+			loader.load( 'Girl.glb', function ( gltf )
+			{
+
+				// ---------------- 3D MODEL ANIMATION MIXER----------------
+
+				gltf.scene.traverse( function( object ) {
+
+						object.frustumCulled = false;
+
+				} );
+
+				//Setting up the animation mixer
+				girlmixer = new THREE.AnimationMixer( gltf.scene );
+
+				//Anims
+				var Girl_anim_IDLE = gltf.animations[ 0] ; // first animation stored in the model is IDLE animation (when the player is not moving)
+
+				Girl_anim_IDLE.clampWhenFinished = true;
+
+				// we are playing the IDLE animation
+				girlmixer.clipAction( Girl_anim_IDLE).play();
+
+				// ---------------- 3D MODEL LOADED INTO GLOBAL MainPlayer VARIABLE ----------------
+
+				girl = gltf.scene;
+				girl.scale.set(0.4, 0.4, 0.4);
+				girl.position.set(0, 1, 4);
+
+				girl.rotation.y = Math.PI + Math.PI / 8;
+
+
+				scene.add(girl);
+
+			} );
+
+
+
+			// ---------------- EVENTS ----------------
+
+			window.addEventListener( 'resize', onWindowResize, false );
+
+
+			// ---------------- STARTING THE GAME MAIN LOOP ----------------
+
+			render();
+
+		}
+
+		/*
+		* 	##################
+		*
+		*	 	FUNCTION CheckLoaded()
+		*		This function is only used to check if all 3D models are loaded.
+		*
+		*	##################
+		*/
+		function CheckLoaded()
+		{
+			if(!AnimMixer)
+			{
+					return false;
+			}
+			if(!girlmixer)
+			{
+					return false;
+			}
+			if(!girl)
+			{
+					return false;
+			}
+			if(!world)
+			{
+					return false;
+			}
+
+			return true;
+
+		}
+
+
+		function render()
+		{
+
+			var delta = clock.getDelta();  //get delta time between two frames
+
+			if( is_Loaded == false)
+			{
+				if( CheckLoaded())
+				{
+					is_Loaded = true;
+				}
+			}
+			else // When the ressources are already loaded
+			{
+				// Tick tasks are there
+
+				AnimMixer.update( delta );
+				girlmixer.update( delta );
+
+			}
+			controls.update();
+
+			renderer.render( scene, camera ); 	// We are rendering the 3D world
+			requestAnimationFrame( render );	// we are calling render() again,  to loop
+		}
+
+
+		/*
+		* 	##################
+		*
+		*	 	FUNCTION ONWINDOWRESIZE()
+		*		This function is called when the window is resized, update the camera projection to fit the new size
+		*
+		*	##################
+		*/
+		function onWindowResize()
+		{
+			const aspect = window.innerWidth / window.innerHeight;
+
+			camera.left = - frustumSize * aspect / 2;
+			camera.right = frustumSize * aspect / 2;
+			camera.top = frustumSize / 2;
+			camera.bottom = - frustumSize / 2;
+
+			camera.updateProjectionMatrix();
+
+			renderer.setSize( window.innerWidth, window.innerHeight );
+		}
+
+		init();
+
+	</script>
+
+</head>
+
+<body>
+
+
+</body>

@@ -1,0 +1,434 @@
+<head>
+
+	<script src="../js/stats.min.js"></script>
+	<meta name='viewport'  content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0' />
+
+	<style>
+		body { margin: 0; touch-action: none;}
+		canvas { width: 100%; height: 100% ; touch-action: none;}
+
+	</style>
+
+	<script type="importmap">
+	    {
+	      "imports": {
+	        "three": "../js/build/three.module.js"
+	      }
+	    }
+	</script>
+
+	<script  type="module">
+
+	  import * as THREE from 'three';
+		import { OrbitControls } from '../js/examples/jsm/controls/OrbitControls.js';
+		import { MTLLoader } from '../js/examples/jsm/loaders/MTLLoader.js';
+		import { OBJLoader } from '../js/examples/jsm/loaders/OBJLoader.js';
+
+		/*
+		* 	--------------------------------------------------------------------------------
+		*
+		*	-------------------------------- GLOBAL VARIABLES --------------------------------
+		*
+		*	--------------------------------------------------------------------------------
+		*/
+
+		// Basic Threejs variables
+		var scene;
+		var camera;
+		var renderer;
+
+		// Performance stats
+		var stats;
+
+		// Boolean - True if every 3D object is loaded and ready to use
+		var isready 			= false;		// Boolean
+		var plant_obj	 		= undefined;	// ThreeJS Mesh
+
+		//PROCEDURAL TERRAIN PARAMETERS
+		var number_x 			= 16;		// number of generated tiles X
+		var number_y 			= 16;		// number of generated tiles Y
+		var random_min 			= 0.7; 		// random height lower value
+		var random_max 			= 1.5;		// random height biggest value
+		var plant_probability 	= 10; 		// lower is more likely to happen
+
+		class TerrainTile
+		{
+			constructor()
+			{
+				this.vertice1 = null; 	//THREE.Vector3
+				this.vertice2 = null; 	//THREE.Vector3
+				this.vertice3 = null; 	//THREE.Vector3
+				this.vertice4 = null; 	//THREE.Vector3
+
+				/*
+				*
+				*	4 ------------ 3
+				*	|              |
+				*	|              |
+				*	|     TILE     |
+				*	|   VERTICES   |
+				*	|              |
+				*	1 ------------ 2
+				*
+				*/
+			}
+		}
+
+		// random float bewteen two values
+		function randFloat(min, max)
+		{
+			var result = (Math.random() * (max - min) + min).toFixed(4);
+			return result;
+		}
+
+		/*
+		*	TILE RANDOMISATION
+		*	The random procedural process, is based on previoulsy created tiles, so the crated tile can match with adjacent tiles
+		*
+		*/
+		function makeTile(verticearray, x , y , terrainData)
+		{
+			// since X and Y are incremented two by two, the arrays indexes are also incremented two by two
+
+			if(terrainData[x][y -2]) // if a // if a previous adjacent tile is already created on Y axis
+			{
+				/*
+				*	Y AXIS TILES
+				*
+				*	4 ------------ 3
+				*	|              |
+				*	|              |
+				*	|     NEW      |
+				*	|     TILE     |
+				*	|              |
+				*	1 ------------ 2
+				*	4 ------------ 3
+				*	|              |
+				*	|              |
+				*	|  	PREVIOUS   |
+				*	|     TILE     |
+				*	|              |
+				*	1 ------------ 2
+				*
+				*/
+
+				// we can see on this example, our new tile vertice 1 has to match previous tile vertice 4 on Y axis
+				// same for new tile vertice 2, it has to match previous tile vertice 3 on Y axis
+
+				terrainData[x][y].vertice1 = terrainData[x][y -2].vertice4.clone();
+				terrainData[x][y].vertice2 = terrainData[x][y -2].vertice3.clone();
+			}
+			else // no previous adjacent tile is already created on Y axis
+			{
+				terrainData[x][y].vertice1 = new THREE.Vector3(- randFloat(random_min + x, random_max + x)  ,  randFloat(random_min, random_max ), - randFloat(random_min+ y, random_max+ y) );
+				terrainData[x][y].vertice2 = new THREE.Vector3(  randFloat(random_min + x, random_max + x)  , randFloat(random_min, random_max ) , - randFloat(random_min+ y, random_max+ y));
+			}
+
+			if(terrainData[x - 2] && terrainData[x - 2][y]) // if a // if a previous adjacent tile is already created on X axis
+			{
+
+				/*
+				*	X AXIS TILES
+				*
+				*	4 ------------ 3	4 ------------ 3
+				*	|              |	|              |
+				*	|              |	|              |
+				*	|  	PREVIOUS   |	|     NEW      |
+				*	|     TILE     |	|     TILE     |
+				*	|              |	|              |
+				*	1 ------------ 2	1 ------------ 2
+				*
+				*/
+
+				// we can see on this example, our new tile vertice 1 has to match previous tile vertice 2 on X axis
+				// same for new tile vertice 4, it has to match previous tile vertice 3 on Y axis
+
+				terrainData[x][y].vertice1 = terrainData[x -2][y].vertice2.clone();
+				terrainData[x][y].vertice4 = terrainData[x -2][y].vertice3.clone();
+			}
+			else // no previous adjacent tile is already created on X axis
+			{
+					terrainData[x][y].vertice4 = new THREE.Vector3(  -randFloat(random_min+ x, random_max+ x) , randFloat(random_min, random_max ), randFloat(random_min+ y, random_max+ y)  );
+			}
+
+				/*
+				*	NEW TILE VERTICE 3 IS ALWAYS RANDOM
+				*
+				*	4 ------------ 3	4 ------------ 3
+				*	|              |	|              |
+				*	|              |	|              |
+				*	|  	PREVIOUS   |	|  !! NEW !!   | 		---------> more and more tiles
+				*	|     TILE     |	|     TILE     |				are created to fill the rows
+				*	|              |	|              |
+				*	1 ------------ 2	1 ------------ 2
+				*
+				*	4 ------------ 3	4 ------------ 3 	4 ------------ 3 	4 ------------ 3
+				*	|              |	|              |	|              |	|              |
+				*	|              |	|              |	|              |	|              |
+				*	|  	PREVIOUS   |	|  	PREVIOUS   |	|  	PREVIOUS   |	|  	PREVIOUS   |
+				*	|     TILE     |	|     TILE     |	|     TILE     |	|     TILE     |
+				*	|              |	|              |	|              |	|              |
+				*	1 ------------ 2	1 ------------ 2	1 ------------ 2	1 ------------ 2
+				*
+				*	4 ------------ 3	4 ------------ 3 	4 ------------ 3 	4 ------------ 3
+				*	|              |	|              |	|              |	|              |
+				*	|              |	|              |	|              |	|              |
+				*	|  	PREVIOUS   |	|  	PREVIOUS   |	|  	PREVIOUS   |	|  	PREVIOUS   |
+				*	|     TILE     |	|     TILE     |	|     TILE     |	|     TILE     |
+				*	|              |	|              |	|              |	|              |
+				*	1 ------------ 2	1 ------------ 2	1 ------------ 2	1 ------------ 2
+				*
+				*/
+
+				// as we can see, the new created vertice 3 is never related to another previous vertice, we can always randomly generate it
+
+			terrainData[x][y].vertice3 = new THREE.Vector3( randFloat(random_min + x, random_max + x) , randFloat(random_min, random_max ) ,  randFloat(random_min  + y, random_max  + y));
+
+
+			// plant generation probability
+			// a random int is generated each tile between "plant_probability" and zero
+			// if this random number == 0, a 3D plant is created on the current vertice 3 tile
+			if(	Math.floor(Math.random() * plant_probability)   == 0)
+			{
+				// plant is created on this tile
+				var newplant = plant_obj.clone();
+				newplant.position.set(terrainData[x][y].vertice3.x, terrainData[x][y].vertice3.y, terrainData[x][y].vertice3.z);
+				newplant.scale.set(2,2,2);
+				scene.add(newplant);
+			}
+
+
+			/*
+			*	Each tile "square" is composed of two triangles :
+			*	1) Bottom triangle
+			*	2) Upper triangle
+			*
+			*	4 ---------- 3
+			*	| UPPER    / |
+			*	|        /   |
+			*	|      / 	 |
+			*	|  	 /	     |
+			*	|  /  BOTTOM |
+			*	1 ---------- 2
+			*
+			*/
+
+			// The new tile is now generated, and match with the previoulsy created ones.
+			// we now have to add it to the verticearray.
+			// the verticearray is used to create a TheeJS geometry
+			// terrainData is only used to keep all the previously created tiles data, so the new tiles can match with the previous adjacent tiles
+
+			// BOTTOM TRIANGLE is triangle with vertices [ 1, 2 , 3]
+
+			verticearray.push(terrainData[x][y].vertice1.x);
+			verticearray.push(terrainData[x][y].vertice1.y);
+			verticearray.push(terrainData[x][y].vertice1.z);
+
+			verticearray.push(terrainData[x][y].vertice2.x);
+			verticearray.push(terrainData[x][y].vertice2.y);
+			verticearray.push(terrainData[x][y].vertice2.z);
+
+			verticearray.push(terrainData[x][y].vertice3.x);
+			verticearray.push(terrainData[x][y].vertice3.y);
+			verticearray.push(terrainData[x][y].vertice3.z);
+
+			// UPPER TRIANGLE is triangle with vertices [ 3, 4 , 1]
+
+			verticearray.push(terrainData[x][y].vertice3.x);
+			verticearray.push(terrainData[x][y].vertice3.y);
+			verticearray.push(terrainData[x][y].vertice3.z);
+
+			verticearray.push(terrainData[x][y].vertice4.x);
+			verticearray.push(terrainData[x][y].vertice4.y);
+			verticearray.push(terrainData[x][y].vertice4.z);
+
+			verticearray.push(terrainData[x][y].vertice1.x);
+			verticearray.push(terrainData[x][y].vertice1.y);
+			verticearray.push(terrainData[x][y].vertice1.z);
+
+		}
+
+		/*
+		* 	##################
+		*
+		*	 	FUNCTION createScene()
+		*		This function is used to init and create the procedural terrain mesh.
+		*
+		* 	##################
+		*/
+		function createScene()
+		{
+			// ---------------- ### CUSTOM GEOMETRY - TRIANGLE  ### ----------------
+
+			const geometry = new THREE.BufferGeometry();
+
+			//verticearray is a simple array which will be fill with vertices coordinates
+			var verticearray = new Array();
+
+			//terrainData is a double array filled with instances of TerrainTile class
+			var terrainData = new Array();
+
+			// the verticearray is used to create a TheeJS geometry
+			// terrainData is only used to keep all the previously created tiles data, so the new tiles can match with the previous adjacent tiles
+
+			// procedurally generate all tiles
+			// double for loops to cover all X/Y combinaisons
+			for(var x = 0; x < number_x*2 ; x += 2) // X is incremented two by two
+			{
+				terrainData[x] = new Array();
+
+				for(var y = 0; y < number_y*2 ; y +=2) // Y is incremented two by two
+				{
+					// !!! since X and Y are incremented two by two, the arrays indexes are also incremented two by two !!!
+					terrainData[x][y] = new TerrainTile(); // new empty tile structure
+					makeTile(verticearray, x, y, terrainData); // randomisation
+				}
+			}
+
+			// itemSize = 3 because there are 3 values (components) per vertex
+			// verticearray is converted into Float32Array
+			geometry.setAttribute( 'position', new THREE.BufferAttribute( new Float32Array(verticearray), 3 ) );
+
+			// compute vertex normals of our complex procedurally generated geometry
+			geometry.computeVertexNormals();
+			geometry.normalsNeedUpdate = true;
+
+			// procedurally generated geometry texture
+			const texture = new THREE.TextureLoader().load( '../Assets/groundPattern.png' );
+			const material =  new THREE.MeshLambertMaterial( {  map: texture, side: THREE.DoubleSide } );
+			const mesh = new THREE.Mesh( geometry, material );
+
+
+			scene.add(mesh);
+		}
+
+		/*
+		* 	##################
+		*
+		*	 	FUNCTION INIT()
+		*		This function is the entry point of our javascript application.
+		*		This function in creating all the basic settings like scene, camera, renderer.
+		*		This function is calling all the scene creation functions, and defining the main game render loop.
+		*
+		*	##################
+		*/
+		function init()
+		{
+			scene = new THREE.Scene();
+
+			// ---------------- RENDERER ----------------
+
+			renderer = new THREE.WebGLRenderer( { antialias : true } );
+			renderer.setPixelRatio( window.devicePixelRatio  );
+			renderer.setSize( window.innerWidth, window.innerHeight );
+			renderer.setClearColor(0xBBBBBB, 1.0);
+			renderer.shadowMap.enabled = true;
+			document.body.appendChild( renderer.domElement );
+
+			// ---------------- CAMERA ----------------
+
+			camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 10000 );
+			camera.position.set(30, 7, 30 );
+			camera.lookAt(new THREE.Vector3(16,2,16));
+			scene.add( camera );
+
+			// ---------------- CONTROLS ----------------
+
+			// OrbitControls is used for the basic camera controls.
+			const controls = new OrbitControls( camera, renderer.domElement );
+			controls.update();
+
+			// ---------------- LIGHTS ----------------
+
+			var ambientLight = new THREE.AmbientLight( 0xcccccc, 1);
+			scene.add( ambientLight );
+
+
+			var light = new THREE.PointLight( 0xcccccc, 2, 100);
+			light.position.set( 16, 8, 16 );
+			scene.add( light );
+
+			// ---------------- EVENTS ----------------
+
+			window.addEventListener( 'resize', onWindowResize, false );
+
+			// ---------------- PERFORMANCE STATS PLUGIN ----------------
+
+			stats = new Stats();
+			stats.showPanel( 0 ); // 0: fps, 1: ms, 2: mb, 3+: custom
+			document.body.appendChild( stats.dom );
+
+
+			// ---------------- 3D MODEL LOAD ( PLANT ) ----------------
+
+			var mtlLoader = new MTLLoader();
+
+			mtlLoader.load("../Assets/plant" + '.mtl', function(materials)
+			{
+				materials.preload();
+				var objLoader = new OBJLoader();
+				objLoader.setMaterials(materials);
+				objLoader.load("../Assets/plant" + '.obj', function(object)
+				{
+					plant_obj = object; // global var plant_obj is set
+				});
+			});
+
+
+			// ---------------- STARTING THE GAME MAIN LOOP ----------------
+
+			render();
+		}
+
+		function render()
+		{
+			stats.begin();
+
+			// this if block is designed to be executed only once, when plant_obj is loaded
+			// when plant_obj is loaded and ready to use
+			if(! isready && plant_obj)
+			{
+				//first frame tasks
+				createScene();
+
+				// As explained, this is executed only once !
+				// isready is set to true, so we don't execute the if block another time.
+				isready = true;
+			}
+			else // every other loop tick
+			{
+				//every other frame tasks
+
+				renderer.render( scene, camera );
+			}
+
+			stats.end();
+			requestAnimationFrame( render );
+		}
+
+
+
+		/*
+		* 	##################
+		*
+		*	 	FUNCTION ONWINDOWRESIZE()
+		*		This function is called when the window is resized, update the camera projection to fit the new size
+		*
+		*	##################
+		*/
+		function onWindowResize()
+		{
+			camera.aspect = window.innerWidth / window.innerHeight;
+			camera.updateProjectionMatrix();
+			renderer.setSize( window.innerWidth, window.innerHeight );
+		}
+
+		init();
+
+	</script>
+
+</head>
+
+<body>
+
+</body>

@@ -1,0 +1,150 @@
+<head>
+
+	<script src="../js/stats.min.js"></script>
+	<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0' />
+
+	<style>
+		body { margin: 0; touch-action: none;}
+		canvas { width: 100%; height: 100% ; touch-action: none;}
+
+	</style>
+
+	<script type="importmap">
+	    {
+	      "imports": {
+	        "three": "../js/build/three.module.js"
+	      }
+	    }
+	</script>
+
+	<script  type="module">
+
+	  import * as THREE from 'three';
+		import { ARButton } from '../js/examples/jsm/webxr/ARButton.js';
+
+		/*
+		* 	--------------------------------------------------------------------------------
+		*
+		*	-------------------------------- GLOBAL VARIABLES --------------------------------
+		*
+		*	--------------------------------------------------------------------------------
+		*/
+
+		// Basic Threejs variables
+		var scene;
+		var camera;
+		var renderer;
+		var xrcontroller;
+
+		//3D Cube
+		var cube;
+
+		// Performance stats
+		var stats;
+
+		/*
+		* 	##################
+		*
+		*	 	FUNCTION INIT()
+		*		This function is the entry point of our javascript application.
+		*
+		*	##################
+		*/
+		function init()
+		{
+
+			/*
+			*
+			*	We are defining the main engine variables.
+			*	scene - where 3D objects are diplayed
+			*	renderer - the threejs 3D display engine
+			*	controls - for camera controls
+			*	lights - to light up our scene
+			*
+			*/
+
+			scene = new THREE.Scene();
+
+			// ---------------- RENDERER ----------------
+
+			renderer = new THREE.WebGLRenderer( { antialias : true } );
+			renderer.setPixelRatio( window.devicePixelRatio  );
+			renderer.setSize( window.innerWidth, window.innerHeight );
+			//renderer.setClearColor( 0x2c3e50, 1 );
+			renderer.xr.enabled = true;
+			document.body.appendChild( renderer.domElement );
+			document.body.appendChild( ARButton.createButton( renderer, { requiredFeatures: [ 'hit-test' ] } ) );
+
+
+
+			// ---------------- CAMERA ----------------
+
+			camera = new THREE.PerspectiveCamera( 70, window.innerWidth / window.innerHeight, 0.01, 20 );
+			scene.add( camera );
+
+			// ---------------- LIGHTS ----------------
+
+			var ambientLight = new THREE.AmbientLight( 0xcccccc, 0.2 );
+			scene.add( ambientLight );
+
+			const directionalLight = new THREE.DirectionalLight( 0xffffff, 0.6 );
+			scene.add( directionalLight );
+
+			// ---------------- PERFORMANCE STATS PLUGIN ----------------
+
+			stats = new Stats();
+			stats.showPanel( 0 ); // 0: fps, 1: ms, 2: mb, 3+: custom
+			document.body.appendChild( stats.dom );
+
+			// ---------------- WEBXR ----------------
+
+			const geometry = new THREE.CylinderGeometry( 0, 0.05, 0.2, 32 ).rotateX( Math.PI / 2 );
+
+			function onSelect()
+			{
+
+					const material = new THREE.MeshPhongMaterial( { color: 0xffffff * Math.random() } );
+					const mesh = new THREE.Mesh( geometry, material );
+					mesh.position.set( 0, 0, - 0.3 ).applyMatrix4( xrcontroller.matrixWorld );
+					mesh.quaternion.setFromRotationMatrix( xrcontroller.matrixWorld );
+					scene.add( mesh );
+
+			}
+
+				xrcontroller = renderer.xr.getController( 0 );
+				xrcontroller.addEventListener( 'select', onSelect );
+				scene.add( xrcontroller );
+
+			// ---------------- STARTING THE RENDER LOOP ----------------
+
+			renderer.setAnimationLoop( render ); // Important for WebXR
+
+		}
+
+		/*
+		* 	##################
+		*
+		*	 	FUNCTION RENDER()
+		*		This function is the main loop of our ThreeJS application.
+		*
+		* 	##################
+		*/
+
+		function render()
+		{
+			stats.begin();  //performance stats
+
+			renderer.render( scene, camera ); 	// We are rendering the 3D world
+			stats.end();					 	// stats , fps ratio ect...
+
+		}
+
+		init();
+
+	</script>
+
+</head>
+
+<body>
+
+</body>

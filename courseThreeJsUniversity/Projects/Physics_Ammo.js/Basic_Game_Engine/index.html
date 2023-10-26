@@ -1,0 +1,799 @@
+<head>
+
+	<script src="../../js/stats.min.js"></script>
+	<script src="../../js/ammo.js"></script>
+	<script src="../../js/jquery-3.2.1.min.js"></script>
+
+	<meta name='viewport'  content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0' />
+
+	<style>
+		body
+		{
+				margin: 0; touch-action: none;
+
+				user-select: none;
+		  	-moz-user-select: none;
+		  	-khtml-user-select: none;
+		  	-webkit-user-select: none;
+		  	-o-user-select: none;
+		}
+
+		canvas { width: 100%; height: 100% ; touch-action: none;}
+
+	</style>
+
+	<link rel="stylesheet" href="SimpleJoystick.css">
+
+	<script type="importmap">
+	    {
+	      "imports": {
+	        "three": "../../js/build/three.module.js"
+	      }
+	    }
+	</script>
+
+	<script  type="module">
+
+	  import * as THREE from 'three';
+		import { OrbitControls } from '../../js/examples/jsm/controls/OrbitControls.js';
+		import { GLTFLoader } from '../../js/examples/jsm/loaders/GLTFLoader.js';
+
+		import EasyControls from "./easyControls.js";
+		import * as easyAmmo from "./easyAmmo.js";
+
+
+		// Basic Threejs variables
+		var scene;
+		var camera;
+		var renderer;
+		var clock;
+
+		// Performance stats
+		var stats;
+
+		// main light
+		var light;
+
+		var player;
+		var PlayerMixer = undefined; 		// ThreeJS Animation Mixer
+		var Player_anim_IDLE;				// ThreeJS Animation Attack
+		var Player_anim_RUN;				// ThreeJS Animation Run (Fly)
+		var is_moving = false;
+
+		var myPhysics;
+		var meshList = {};
+		var bricks = [];
+
+		var rope;
+
+		var is_loaded = false;
+		var is_FullScreen = false;
+
+		var myControls;
+
+		function is_touch_enabled()
+		{
+		    return ( 'ontouchstart' in window ) ||
+		           ( navigator.maxTouchPoints > 0 ) ||
+		           ( navigator.msMaxTouchPoints > 0 );
+		}
+
+		// ------ Ammo.js Init ------
+		Ammo().then( AmmoStart );
+
+		function AmmoStart()
+		{
+				myPhysics = new easyAmmo.AmmoWorld( easyAmmo.UniverseType.SoftRigidDynamics );
+				//myPhysics.initPhysicsUniverse();
+
+				myControls = new EasyControls();
+
+				if( is_touch_enabled() )
+				{
+						myControls.addJoystick();
+						myControls.addButton( "A_Btn", { width : "15%", height : "auto", bottom : "50px", right : "50px" }, "../../Assets/A_button.png", function(){ jump(); } );
+				}
+				else
+				{
+						myControls.addKeyboard();
+						myControls.add_keydown_event("32", function(){ jump(); } );
+				}
+
+				initGraphicsUniverse();
+		}
+
+		function initDynamicScene()
+		{
+				myPhysics.rigidBodyFactory({
+						mesh 	: meshList["floor"],
+						shape : easyAmmo.RBShape.Box,
+						mass 	: 0,
+						size 	: new THREE.Vector3(2000, 0.5, 2000),
+						friction : 3
+				});
+
+				myPhysics.rigidBodyFactory({
+						mesh 	: meshList["slope1"],
+						shape : easyAmmo.RBShape.Box,
+						mass 	: 0,
+						size 	: new THREE.Vector3(50, 300, 50),
+						rotation : new THREE.Vector3(0, 0, Math.PI/2.2)
+				});
+
+				myPhysics.rigidBodyFactory({
+						mesh 	: meshList["slope2"],
+						shape : easyAmmo.RBShape.Box,
+						mass 	: 0,
+						size 	: new THREE.Vector3(50, 300, 50),
+						rotation : new THREE.Vector3(0, 0, Math.PI/2.6)
+				});
+
+				myPhysics.rigidBodyFactory({
+						mesh 	: meshList["slope3"],
+						shape : easyAmmo.RBShape.Box,
+						mass 	: 0,
+						size 	: new THREE.Vector3(50, 300, 50),
+						rotation : new THREE.Vector3(0, 0, Math.PI/2.4)
+				});
+
+				myPhysics.rigidBodyFactory({
+						mesh 	: meshList["desk"],
+						shape : easyAmmo.RBShape.Box,
+						mass 	: 10,
+						size 	: new THREE.Vector3(8, 9, 10)
+				});
+
+				myPhysics.rigidBodyFactory({
+						mesh 	: meshList["chair"],
+						shape : easyAmmo.RBShape.Box,
+						mass 	: 5,
+						size 	: new THREE.Vector3(5, 9, 5)
+				});
+
+				myPhysics.rigidBodyFactory({
+						mesh 	: meshList["box"],
+						shape : easyAmmo.RBShape.Box,
+						mass 	: 30,
+						size 	: new THREE.Vector3(8, 8, 8)
+				});
+
+				myPhysics.rigidBodyFactory({
+						mesh 	: meshList["building"],
+						shape : easyAmmo.RBShape.Box,
+						mass 	: 0,
+						size 	: new THREE.Vector3(55, 120, 35),
+						rotation : new THREE.Vector3(0, -Math.PI/2, 0),
+						friction : 1
+				});
+
+				myPhysics.rigidBodyFactory({
+						mesh 	: meshList["city_light"],
+						shape : easyAmmo.RBShape.Box,
+						mass 	: 0,
+						size 	: new THREE.Vector3(5, 25, 5),
+						friction : 1
+				});
+
+				myPhysics.rigidBodyFactory({
+						mesh 	: meshList["underbox"],
+						shape : easyAmmo.RBShape.Box,
+						mass 	: 30,
+						size 	: new THREE.Vector3(10, 2, 10)
+				});
+
+				myPhysics.rigidBodyFactory({
+						mesh 	: player,
+						shape : easyAmmo.RBShape.Capsule_Character,
+						mass 	: 60,
+						friction : 1,
+						size 	: new THREE.Vector3(5, 15, 5)
+				});
+
+				for(var i = 0 ; i < bricks.length ; i++)
+				{
+						myPhysics.rigidBodyFactory({
+								mesh 	: bricks[i],
+								shape : easyAmmo.RBShape.Box,
+								mass 	: 25,
+								friction : 1,
+								restitution : 0.5,
+								size 	: new THREE.Vector3(20, 5, 40)
+						});
+				}
+
+				myPhysics.rigidBodyFactory({
+						mesh 	: meshList["ball"],
+						shape : easyAmmo.RBShape.Sphere,
+						mass 	: 500,
+						friction : 2,
+						restitution : 1,
+						size 	: 30
+				});
+
+				myPhysics.rigidBodyFactory({
+						mesh 	: meshList["ballMesh"],
+						shape : easyAmmo.RBShape.Sphere,
+						mass 	: 10,
+						size 	: 10,
+						restitution : 0.25,
+						friction : 3
+				});
+
+				myPhysics.rigidBodyFactory({
+						mesh 	: meshList["boxMesh"],
+						shape : easyAmmo.RBShape.Box,
+						mass 	: 0,
+						size 	:  new THREE.Vector3(50, 2.5, 2.5),
+						restitution : 0.25,
+						friction : 3
+				});
+
+				myPhysics.rigidBodyFactory({
+						mesh 	: meshList["boxMesh2"],
+						shape : easyAmmo.RBShape.Box,
+						mass 	: 0,
+						size 	:  new THREE.Vector3(2.5, 32.5, 2.5),
+						restitution : 0.25,
+						friction : 3
+				});
+
+				myPhysics.rigidBodyFactory({
+						mesh 	: meshList["boxMesh3"],
+						shape : easyAmmo.RBShape.Box,
+						mass 	: 0,
+						size 	:  new THREE.Vector3(2.5, 32.5, 2.5),
+						restitution : 0.25,
+						friction : 3
+				});
+
+				// ---------------- ROPE ----------------
+
+				const ropeNumSegments = 10;
+				const ropeLength = 70;
+				const ropeMass = 3;
+				const ropePos = meshList["ballMesh"].position.clone();
+				ropePos.y += 5;
+
+				const segmentLength = ropeLength / ropeNumSegments;
+				const ropeGeometry = new THREE.BufferGeometry();
+				const ropeMaterial = new THREE.LineBasicMaterial( { color: 0x000000, linewidth : 0.5 } );
+				const ropePositions = [];
+				const ropeIndices = [];
+
+				for ( let i = 0; i < ropeNumSegments + 1; i ++ )
+				{
+						ropePositions.push( ropePos.x, ropePos.y + i * segmentLength, ropePos.z );
+				}
+
+				for ( let i = 0; i < ropeNumSegments; i ++ )
+				{
+						ropeIndices.push( i, i + 1 );
+				}
+
+				ropeGeometry.setIndex( new THREE.BufferAttribute( new Uint16Array( ropeIndices ), 1 ) );
+				ropeGeometry.setAttribute( 'position', new THREE.BufferAttribute( new Float32Array( ropePositions ), 3 ) );
+				ropeGeometry.computeBoundingSphere();
+				rope = new THREE.LineSegments( ropeGeometry, ropeMaterial );
+				rope.castShadow = true;
+				rope.receiveShadow = true;
+				scene.add( rope );
+
+				// Ammo
+
+				var physicsWorld = myPhysics.physicsUniverse;
+
+				const softBodyHelpers = new Ammo.btSoftBodyHelpers();
+				const ropeStart = new Ammo.btVector3( ropePos.x, ropePos.y, ropePos.z );
+				const ropeEnd = new Ammo.btVector3( ropePos.x, ropePos.y + ropeLength, ropePos.z );
+				const ropeSoftBody = softBodyHelpers.CreateRope( physicsWorld.getWorldInfo(), ropeStart, ropeEnd, ropeNumSegments - 1, 0 );
+				const sbConfig = ropeSoftBody.get_m_cfg();
+				sbConfig.set_viterations( 10 );
+				sbConfig.set_piterations( 10 );
+				ropeSoftBody.setTotalMass( ropeMass, false );
+				Ammo.castObject( ropeSoftBody, Ammo.btCollisionObject ).getCollisionShape().setMargin( 0.05 * 3 );
+				physicsWorld.addSoftBody( ropeSoftBody, 1, - 1 );
+				rope.userData.physicsBody = ropeSoftBody;
+				// Disable deactivation
+				ropeSoftBody.setActivationState( 4 );
+
+				// Glue the rope extremes to the ball and the arm
+				const influence = 1;
+				ropeSoftBody.appendAnchor( 0, meshList["ballMesh"].userData.physicsBody, true, influence );
+				ropeSoftBody.appendAnchor( ropeNumSegments, meshList["boxMesh"].userData.physicsBody, true, influence );
+
+
+		}
+
+		function initGraphicsUniverse()
+		{
+
+				var background = 0x72645b;
+
+				clock = new THREE.Clock();
+				scene = new THREE.Scene();
+				scene.fog = new THREE.FogExp2(background, 0.0020);
+
+				// ---------------- RENDERER ----------------
+
+				renderer = new THREE.WebGLRenderer( { antialias : true } );
+				renderer.setPixelRatio( window.devicePixelRatio * 1  );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				renderer.setClearColor(background);
+				renderer.shadowMap.enabled = true;
+				document.body.appendChild( renderer.domElement );
+
+				// ---------------- CAMERA ----------------
+
+				camera = new THREE.PerspectiveCamera( 80, window.innerWidth / window.innerHeight, 1, 800 );
+				camera.position.set( -10, 40, 75 );
+				camera.lookAt(new THREE.Vector3(0,0,0));
+				scene.add( camera );
+
+				// ---------------- LIGHTS ----------------
+
+				scene.add( new THREE.AmbientLight( 0xcccccc, 0.5 ) );
+				scene.add( new THREE.HemisphereLight( 0x443333, 0x111122 ) );
+
+				light = new THREE.DirectionalLight(0xFFFFFFF, 1, 1000, Math.PI/6);
+				light.position.set(-200, 500, 200);
+				light.castShadow = true;
+				light.shadow.mapSize.width = 2000;
+				light.shadow.mapSize.height = 2000;
+				light.shadow.camera.near = 2;
+				light.shadow.camera.far = 1000;
+				light.shadow.camera.left = -400;
+				light.shadow.camera.right = 400;
+				light.shadow.camera.top = 400;
+				light.shadow.camera.bottom = -400;
+				scene.add(light);
+
+				// ---------------- EVENTS ----------------
+
+				window.addEventListener( 'resize', onWindowResize, false );
+				document.getElementById("fullscreenBtn").onclick = function()
+				{
+						if(is_FullScreen)
+						{
+								closeFullscreen();
+								is_FullScreen = false;
+						}
+						else
+						{
+								openFullscreen(document.body);
+								is_FullScreen = true;
+						}
+				};
+
+				// ---------------- PERFORMANCE STATS PLUGIN ----------------
+
+				stats = new Stats();
+				stats.showPanel( 0 ); // 0: fps, 1: ms, 2: mb, 3+: custom
+				document.body.appendChild( stats.dom );
+
+				// ---------------- FLOOR ----------------
+
+				const floorMaterial = new THREE.MeshPhysicalMaterial({ color  : 0x999999, metalness : 0, roughness : 1 });
+				const mesh = new THREE.Mesh( new THREE.BoxGeometry(4000, 1, 4000) , floorMaterial);
+				mesh.receiveShadow = true;
+				scene.add(mesh);
+				meshList["floor"] = mesh;
+
+				// ---------------- CUBE ----------------
+
+
+				// ---------------- PLAYER ----------------
+
+				var loader = new GLTFLoader();
+				loader.load( '../../Assets/Girl.glb', function ( gltf )
+				{
+						gltf.scene.traverse( function ( child ){if ( child.isSkinnedMesh ) { child.castShadow = true;}});
+
+						Player_anim_IDLE = gltf.animations[ 0] ;
+						Player_anim_RUN  = gltf.animations[ 1] ;
+
+						Player_anim_IDLE.clampWhenFinished = true;
+						Player_anim_RUN.clampWhenFinished = true;
+
+						PlayerMixer = new THREE.AnimationMixer( gltf.scene );
+						PlayerMixer.clipAction( Player_anim_IDLE).play();
+
+						// ---------------- 3D MODEL LOADED INTO GLOBAL MainPlayer VARIABLE ----------------
+
+						var tmpplayer = gltf.scene;
+						tmpplayer.scale.set(5, 5, 5);
+						tmpplayer.position.y = -12;
+
+						player = new THREE.Object3D();
+						player.add(tmpplayer);
+						player.position.y = 50;
+						scene.add(player);
+
+				});
+
+				// ---------------- DESK & CHAIR ----------------
+
+				var loader = new GLTFLoader();
+				loader.load( '../../Assets/desk.glb', function ( gltf )
+				{
+						gltf.scene.traverse( function ( child ){ child.castShadow = true; });
+
+						var tmpobj = gltf.scene;
+						tmpobj.scale.set(8, 8, 8);
+						tmpobj.position.y = -9;
+
+						var desk = new THREE.Object3D();
+						desk.add(tmpobj);
+						desk.position.set(135, 20, 100);
+						scene.add(desk);
+
+						meshList["desk"] = desk;
+				} );
+
+				var loader = new GLTFLoader();
+				loader.load( '../../Assets/chair.glb', function ( gltf )
+				{
+						gltf.scene.traverse( function ( child ){ child.castShadow = true; });
+
+						var tmpobj = gltf.scene;
+						tmpobj.scale.set(8, 8, 8);
+						tmpobj.position.y = -9;
+
+						var chair = new THREE.Object3D();
+						chair.add(tmpobj);
+						chair.position.set(150, 20, 100);
+						scene.add(chair);
+
+						meshList["chair"] = chair;
+				} );
+
+				// ---------------- BUILDING ----------------
+
+				var loader = new GLTFLoader();
+				loader.load( '../../Assets/building.glb', function ( gltf )
+				{
+						gltf.scene.traverse( function ( child ){ child.castShadow = true; });
+
+						var tmpobj = gltf.scene;
+						tmpobj.scale.set(20, 20, 20);
+						tmpobj.position.y = -120;
+
+						var building = new THREE.Object3D();
+						building.add(tmpobj);
+						building.position.set(300, 120, 200);
+						scene.add(building);
+
+						meshList["building"] = building;
+				} );
+
+				// ---------------- CITY LIGHT ----------------
+
+				var loader = new GLTFLoader();
+				loader.load( '../../Assets/city_light.glb', function ( gltf )
+				{
+						gltf.scene.traverse( function ( child ){ child.castShadow = true; });
+
+						var tmpobj = gltf.scene;
+						tmpobj.scale.set(4, 4, 4);
+						tmpobj.position.y = -25;
+
+						var city_light = new THREE.Object3D();
+						city_light.add(tmpobj);
+						city_light.position.set(50, 27, 0);
+						scene.add(city_light);
+
+						meshList["city_light"] = city_light;
+				} );
+
+				// ---------------- WOOD BOX & UNDERBOX ----------------
+
+				var loader = new GLTFLoader();
+				loader.load( '../../Assets/box.glb', function ( gltf )
+				{
+						gltf.scene.traverse( function ( child ){ child.castShadow = true; });
+
+						var tmpobj = gltf.scene;
+						tmpobj.scale.set(2, 2, 2);
+						tmpobj.position.y = -9;
+
+						var box = new THREE.Object3D();
+						box.add(tmpobj);
+						box.position.set(-50, 30, 0);
+						scene.add(box);
+
+						meshList["box"] = box;
+				} );
+
+				var loader = new GLTFLoader();
+				loader.load( '../../Assets/underbox.glb', function ( gltf )
+				{
+						gltf.scene.traverse( function ( child ){ child.castShadow = true; });
+
+						var tmpobj = gltf.scene;
+						tmpobj.scale.set(2, 2, 2);
+						tmpobj.position.y = -2;
+
+						var underbox = new THREE.Object3D();
+						underbox.add(tmpobj);
+						underbox.position.set(-50, 10, 0);
+						scene.add(underbox);
+
+						meshList["underbox"] = underbox;
+				} );
+
+				// ---------------- Slopes ----------------
+
+				const slopeGeometry = new THREE.BoxGeometry(100, 600, 100);
+
+				const slope1 = new THREE.Mesh(slopeGeometry, floorMaterial);
+				slope1.receiveShadow = true;
+				slope1.castShadow = true;
+				slope1.position.set(-150, -45, 100 );
+				scene.add(slope1);
+				meshList["slope1"] = slope1;
+
+				const slope2 = new THREE.Mesh(slopeGeometry, floorMaterial);
+				slope2.receiveShadow = true;
+				slope2.castShadow = true;
+				slope2.position.set(-136, -45, 300 );
+				scene.add(slope2);
+				meshList["slope2"] = slope2;
+
+				const slope3 = new THREE.Mesh(slopeGeometry, floorMaterial);
+				slope3.receiveShadow = true;
+				slope3.castShadow = true;
+				slope3.position.set(-138, -45, 200 );
+				scene.add(slope3);
+				meshList["slope3"] = slope3;
+
+				// ROPE
+
+				// ---------------- BALL ----------------
+
+				const ballMat = new THREE.MeshPhysicalMaterial({ color  : 0xffffff, metalness : 0.5, roughness : 0, clearcoat : 1 })
+				const ballMesh = new THREE.Mesh( new THREE.SphereGeometry(10, 64, 64), ballMat);
+				ballMesh.position.y = 25;
+				ballMesh.position.z = 50;
+				ballMesh.castShadow = true;
+				scene.add(ballMesh);
+				meshList["ballMesh"] = ballMesh;
+
+				// box
+				const boxMesh = new THREE.Mesh( new THREE.BoxGeometry(100, 5, 5), ballMat);
+				boxMesh.position.y = 100;
+				boxMesh.position.z = 50;
+				boxMesh.castShadow = true;
+				scene.add(boxMesh);
+				meshList["boxMesh"] = boxMesh;
+
+				// pillar 1
+				const boxMesh2 = new THREE.Mesh( new THREE.BoxGeometry(5, 105, 5), ballMat);
+				boxMesh2.position.y = 50;
+				boxMesh2.position.x = 50;
+				boxMesh2.position.z = 50;
+				boxMesh2.castShadow = true;
+				scene.add(boxMesh2);
+				meshList["boxMesh2"] = boxMesh2;
+
+				// pillar 2
+				const boxMesh3 = new THREE.Mesh( new THREE.BoxGeometry(5, 105, 5), ballMat);
+				boxMesh3.position.y = 50;
+				boxMesh3.position.x = -50;
+				boxMesh3.position.z = 50;
+				boxMesh3.castShadow = true;
+				scene.add(boxMesh3);
+				meshList["boxMesh3"] = boxMesh3;
+
+				// ---------------- Bricks ----------------
+
+				var tmpBoxGeo = new THREE.BoxGeometry(40, 10, 80);
+				const tmpBoxMaterial = new THREE.MeshPhysicalMaterial({ color  : 0xEEEEEE, 	metalness : 0, 	roughness : 1});
+
+				for(var i = 0 ; i < 10 ; i+=5 )
+				{
+							for(var j = 0 ; j < 35 ; j+=5  )
+							{
+										var tmpBox = new THREE.Mesh(tmpBoxGeo, tmpBoxMaterial);
+										tmpBox.position.y = j + j * 5 + 100 ;
+										tmpBox.position.z = 150 + j * 4;
+										tmpBox.position.x = i + i * 8;
+										tmpBox.castShadow = true;
+										scene.add(tmpBox);
+										bricks.push(tmpBox);
+							}
+				}
+
+				const rockTexture2 = new THREE.TextureLoader().load('../../Assets/stoneTexture_2.png', function(){
+
+					rockTexture2.wrapS = rockTexture2.wrapT = THREE.RepeatWrapping;
+					rockTexture2.repeat.set(6,6);
+
+					const ballGeo = new THREE.SphereGeometry(30, 64, 64);
+					const ballMat = new THREE.MeshPhysicalMaterial({map : rockTexture2, metalness : 0, roughness : 1, clearcoat : 1})
+					var ball = new THREE.Mesh(ballGeo, ballMat);
+					ball.position.set(-300,3000, 200);
+					ball.castShadow = true;
+					scene.add(ball);
+					meshList["ball"] = ball;
+
+				});
+
+
+				// ---------------- STARTING THE GAME MAIN LOOP ----------------
+				//setTimeout(function(){ initDynamicScene(); }, 200);
+
+				render();
+		}
+
+		function getOrientation(joystickX, joystickY)
+		{
+				var hypo = Math.sqrt( ( joystickX * joystickX ) + ( joystickY * joystickY ) );
+				var angle = Math.atan( joystickX / joystickY);
+
+				if(joystickX >= 0 && joystickY >= 0) { return angle + Math.PI; }
+				if(joystickX <= 0 && joystickY >= 0) { return angle + Math.PI; }
+
+				return angle;
+		}
+
+		function jump()
+		{
+				player.userData.physicsBody.activate();
+
+				var curVel 					= player.userData.physicsBody.getLinearVelocity();
+				curVel.setY(  100 );
+				player.userData.physicsBody.setLinearVelocity(curVel);
+		}
+
+		function checkReady()
+		{
+				if(! meshList["floor"] ){ return false; }
+				if(! meshList["slope1"] ){ return false; }
+				if(! meshList["slope2"] ){ return false; }
+				if(! meshList["slope3"] ){ return false; }
+				if(! meshList["desk"] ){ return false; }
+				if(! meshList["chair"] ){ return false; }
+				if(! meshList["box"] ){ return false; }
+				if(! meshList["building"] ){ return false; }
+				if(! meshList["city_light"] ){ return false; }
+				if(! meshList["underbox"] ){ return false; }
+				if(! meshList["ball"] ){ return false; }
+				if(! player ){ return false; }
+				//if( bricks.length != 14 ){ console.log(bricks.length); return false; }
+
+				return true;
+		}
+
+		function render()
+		{
+			stats.begin();
+			var delta = clock.getDelta();
+
+
+			if(is_loaded == false)
+			{
+					if( checkReady() )
+					{
+							initDynamicScene();
+							console.log("Init Physics object ... !");
+
+							is_loaded = true;
+					}
+			}
+			else
+			{
+					myPhysics.updatePhysicsUniverse( delta );
+
+
+
+					if(rope)
+					{
+
+							// Update rope
+							const softBody = rope.userData.physicsBody;
+							const ropePositions = rope.geometry.attributes.position.array;
+							const numVerts = ropePositions.length / 3;
+							const nodes = softBody.get_m_nodes();
+							let indexFloat = 0;
+
+							for ( let i = 0; i < numVerts; i ++ ) {
+
+								const node = nodes.at( i );
+								const nodePos = node.get_m_x();
+								ropePositions[ indexFloat ++ ] = nodePos.x();
+								ropePositions[ indexFloat ++ ] = nodePos.y();
+								ropePositions[ indexFloat ++ ] = nodePos.z();
+
+							}
+
+							rope.geometry.attributes.position.needsUpdate = true;
+
+					}
+
+					if(player)
+					{
+							camera.position.set( player.position.x, player.position.y + 60, player.position.z - 100 );
+							camera.lookAt(player.position);
+
+							light.position.set(player.position.x - 400, player.position.y + 500, player.position.z + 400);
+							light.target 							= player;
+
+							var movePos = myControls.getMove();
+
+							var movementX 						=  movePos.x;
+							var movementY 						=  movePos.y;
+
+							if(movementX != 0 ||  movementY != 0)
+							{
+
+										if(is_moving == false)
+										{
+												is_moving = true;
+												PlayerMixer.clipAction( Player_anim_RUN).play();
+												PlayerMixer.clipAction( Player_anim_IDLE).stop();
+										}
+
+										player.userData.physicsBody.activate();
+
+										var curVel 					= player.userData.physicsBody.getLinearVelocity();
+										curVel.setX(  -movementX );
+										curVel.setZ(  -movementY );
+										player.userData.physicsBody.setLinearVelocity(curVel);
+
+										var tmpTrans 				= player.userData.physicsBody.getCenterOfMassTransform();
+										var quat 						= new Ammo.btQuaternion(  0, 0, 0, 0 );
+										quat.setEulerZYX( 0, getOrientation( movePos.x , movePos.y ), 0);
+										tmpTrans.setRotation(quat);
+										player.userData.physicsBody.setCenterOfMassTransform(tmpTrans);
+							}
+							else
+							{
+										if(is_moving == true)
+										{
+											is_moving 				= false;
+											PlayerMixer.clipAction( Player_anim_IDLE).play();
+											PlayerMixer.clipAction( Player_anim_RUN).stop();
+										}
+							}
+							PlayerMixer.update( delta );
+					}
+			}
+
+			renderer.render( scene, camera );
+			stats.end();
+			requestAnimationFrame( render );
+		}
+
+		function onWindowResize()
+		{
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+				renderer.setSize( window.innerWidth, window.innerHeight );
+		}
+
+		function openFullscreen(fullscreenElem)
+		{
+			  if (fullscreenElem.requestFullscreen) 						{ fullscreenElem.requestFullscreen(); }
+				else if (fullscreenElem.webkitRequestFullscreen) 	{ fullscreenElem.webkitRequestFullscreen(); }
+				else if (fullscreenElem.msRequestFullscreen) 			{ fullscreenElem.msRequestFullscreen(); }
+		}
+
+		function closeFullscreen()
+		{
+			  if (document.exitFullscreen) { document.exitFullscreen(); }
+			  else if (document.webkitExitFullscreen) { document.webkitExitFullscreen(); }
+			  else if (document.msExitFullscreen) {  document.msExitFullscreen(); }
+		}
+
+	</script>
+
+</head>
+
+<body>
+
+	<a style=" width : 10%; height : auto; border : none; background : none; position : absolute; top : 20px; right : 20px; transparent : true; opacity : 0.25;" id="fullscreenBtn"><img style="width : 100%; height : auto;" src="../../Assets/fullscreen.png" alt="fullsscreenimg"></img></a>
+	<!-- <button style=" width : 15%; height : auto; border : none; background : none; position : absolute; bottom : 50px; right : 50px; transparent : true; opacity : 0.25;" id="A_button"><img style="width : 100%; height : auto;" src="../../Assets/A_button.png" alt="A_Button"></img></button> -->
+
+
+	<!-- <h1 style="position : absolute; top : 0%; text-align : center; width : 100%;">Test 3</h1> -->
+
+</body>

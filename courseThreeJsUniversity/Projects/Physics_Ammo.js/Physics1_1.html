@@ -1,0 +1,196 @@
+<head>
+
+	<script src="../js/stats.min.js"></script>
+	<script src="../js/ammo.js"></script>
+
+	<meta name='viewport'  content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0' />
+
+	<style>
+		body
+    {
+        margin: 0; touch-action: none;
+        background-image: -webkit-gradient(linear, 0 0, 100% 100%, color-stop(0, #877fa8), color-stop(100%, #f9ae91));
+        background-image: -webkit-linear-gradient(135deg, #877fa8, #f9ae91);
+        background-image: -moz-linear-gradient(45deg, #877fa8, #f9ae91);
+        background-image: -ms-linear-gradient(45deg, #877fa8 0, #f9ae91 100%);
+        background-image: -o-linear-gradient(45deg, #877fa8, #f9ae91);
+        background-image: linear-gradient(135deg, #877fa8, #f9ae91);
+    }
+    canvas { width: 100%; height: 100% ; touch-action: none;}
+
+	</style>
+
+	<script type="importmap">
+			{
+				"imports": {
+					"three": "../js/build/three.module.js"
+				}
+			}
+	</script>
+
+	<script  type="module">
+
+		import * as THREE from 'three';
+
+		var physicsUniverse     = undefined;
+
+		var scene            	= undefined ;
+		var camera            = undefined ;
+		var renderer          = undefined ;
+		var clock             = undefined ;
+
+		var rigidBody_List = new Array();
+
+		var tmpTransformation = undefined;
+
+		Ammo().then( AmmoStart );
+
+		function AmmoStart()
+		{
+				// starting point
+				tmpTransformation = new Ammo.btTransform();
+
+				initPhysicsUniverse();
+				initGraphicsUniverse();
+
+				// floor
+				createCube(40 , new THREE.Vector3(15, -30, 15 ), 0 );
+
+				createCube(4 , new THREE.Vector3(0, 10, 0) , 1, null );
+				createCube(2 , new THREE.Vector3(10, 30, 0) , 1, null );
+				createCube(4 , new THREE.Vector3(10, 20, 10) , 1, null );
+				createCube(6 , new THREE.Vector3(5, 40, 20) , 1, null );
+				createCube(8 , new THREE.Vector3(25, 100, 5) , 1, null );
+				createCube(8 , new THREE.Vector3(20, 60, 25) , 1, null );
+				createCube(4 , new THREE.Vector3(20, 100, 25) , 1, null );
+				createCube(2 , new THREE.Vector3(20, 200, 25) , 1, null );
+
+				render();
+
+		}
+
+		function initPhysicsUniverse()
+		{
+				var collisionConfiguration  = new Ammo.btDefaultCollisionConfiguration();
+				var dispatcher              = new Ammo.btCollisionDispatcher(collisionConfiguration);
+				var overlappingPairCache    = new Ammo.btDbvtBroadphase();
+				var solver                  = new Ammo.btSequentialImpulseConstraintSolver();
+
+				physicsUniverse = new Ammo.btDiscreteDynamicsWorld(dispatcher, overlappingPairCache, solver, collisionConfiguration);
+				physicsUniverse.setGravity( new Ammo.btVector3(0, -75, 0) );
+		}
+
+		function initGraphicsUniverse()
+		{
+				clock = new THREE.Clock();
+				scene = new THREE.Scene();
+
+				camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 1, 1000 );
+				camera.position.set(-25, 20, -25);
+				camera.lookAt(new THREE.Vector3(0, 6, 0));
+				scene.add(camera);
+
+				renderer = new THREE.WebGLRenderer({antialias : true, alpha : true});
+				renderer.setPixelRatio(window.devicePixelRatio);
+				renderer.setSize(window.innerWidth, window.innerHeight);
+				document.body.appendChild(renderer.domElement) ;
+
+				//light
+				var ambientLight = new THREE.AmbientLight(0xcccccc, 0.2);
+				scene.add(ambientLight);
+				var directionalLight = new THREE.DirectionalLight(0xffffff, 0.6);
+				directionalLight.position.set(-1, 0.9, 0.4);
+				scene.add(directionalLight);
+		}
+
+		function createCube( scale, position, mass, rotation_q )
+		{
+
+				var quaternion = undefined ;
+
+				if(rotation_q == null )
+				{
+					 quaternion = {x: 0, y: 0, z: 0, w:  1};
+				}
+				else
+				{
+					 quaternion = rotation_q;
+				}
+
+				// ----------------- Three.js -----------------
+
+				var tmpGeo = new THREE.BoxGeometry(scale, scale, scale);
+				var tmpMat = new THREE.MeshPhongMaterial({color: Math.random() * 0xffffff});
+				var newCube = new THREE.Mesh(tmpGeo, tmpMat);
+				newCube.position.set(position.x, position.y, position.z);
+				scene.add(newCube);
+
+				// ----------------- Ammo.js -----------------
+
+				// Base Position & Rotation (Physics)
+				var transform = new Ammo.btTransform();
+				transform.setIdentity();
+				transform.setOrigin( new Ammo.btVector3( position.x, position.y, position.z ) );
+				transform.setRotation( new Ammo.btQuaternion( quaternion.x, quaternion.y, quaternion.z, quaternion.w ) );
+				var defaultMotionState = new Ammo.btDefaultMotionState(transform);
+
+				// Collision Shape
+				var structColShape = new Ammo.btBoxShape( new Ammo.btVector3( scale * 0.5, scale * 0.5, scale * 0.5 ) );
+				structColShape.setMargin(0.05);
+
+				// Local Inertia
+				var localIn = new Ammo.btVector3(0, 0, 0);
+				structColShape.calculateLocalInertia(mass, localIn);
+
+				// RigidBody
+
+				var RB_Info = new Ammo.btRigidBodyConstructionInfo(mass, defaultMotionState, structColShape, localIn);
+				var RB = new Ammo.btRigidBody(RB_Info);
+
+				physicsUniverse.addRigidBody(RB);
+
+				newCube.userData.physicsBody = RB;
+				rigidBody_List.push(newCube);
+		}
+
+		function updatePhysicsUniverse( delta )
+		{
+				physicsUniverse.stepSimulation(delta, 10 );
+
+				for ( let i = 0; i < rigidBody_List.length; i++ )
+				{
+				    var graphics_object = rigidBody_List[i];
+						var physics_object = rigidBody_List[i].userData.physicsBody;
+
+						var motionstate = physics_object.getMotionState();
+						if(motionstate)
+						{
+								motionstate.getWorldTransform( tmpTransformation );
+								var new_position = tmpTransformation.getOrigin();
+								var new_rot = tmpTransformation.getRotation();
+
+								graphics_object.position.set(new_position.x(), new_position.y(), new_position.z() );
+								graphics_object.quaternion.set(new_rot.x(), new_rot.y(), new_rot.z(), new_rot.w() );
+
+						}
+				}
+		}
+
+		function render()
+		{
+				var delta = clock.getDelta();
+				updatePhysicsUniverse(delta);
+
+				renderer.render(scene, camera);
+				requestAnimationFrame(render);
+		}
+
+
+
+	</script>
+
+</head>
+
+<body>
+
+</body>

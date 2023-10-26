@@ -1,0 +1,256 @@
+<head>
+
+	<script src="../js/stats.min.js"></script>
+	<script src="../js/ammo.js"></script>
+
+	<meta name='viewport'  content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0' />
+
+	<style>
+		body
+		{
+				margin: 0; touch-action: none;
+
+				user-select: none;
+		  	-moz-user-select: none;
+		  	-khtml-user-select: none;
+		  	-webkit-user-select: none;
+		  	-o-user-select: none;
+		}
+
+		canvas { width: 100%; height: 100% ; touch-action: none;}
+
+	</style>
+
+	<script type="importmap">
+	    {
+	      "imports": {
+	        "three": "../js/build/three.module.js"
+	      }
+	    }
+	</script>
+
+	<script  type="module">
+
+	  import * as THREE from 'three';
+		import { OrbitControls } from '../js/examples/jsm/controls/OrbitControls.js';
+		import { GLTFLoader } from '../js/examples/jsm/loaders/GLTFLoader.js';
+
+		// Basic Threejs variables
+		var scene;
+		var camera;
+		var renderer;
+		var clock;
+
+		// Performance stats
+		var stats;
+
+		// main light
+		var light;
+
+		// Ammo.js
+		var physicsUniverse     = undefined;
+		var rigidBody_List 			= new Array();
+		var tmpTransformation   = undefined;
+
+		var MeshesToLoad 				= new Array();
+
+		var is_loaded = false;
+
+		// ------ Ammo.js Init ------
+		Ammo().then( AmmoStart );
+
+		function AmmoStart()
+		{
+				tmpTransformation = new Ammo.btTransform();
+
+				initGraphicsUniverse();
+				initPhysicsUniverse();
+
+				render();
+		}
+
+		// ------ Phisics World setup ------
+		function initPhysicsUniverse()
+		{
+		    var collisionConfiguration  = new Ammo.btDefaultCollisionConfiguration();
+		    var dispatcher              = new Ammo.btCollisionDispatcher(collisionConfiguration);
+		    var overlappingPairCache    = new Ammo.btDbvtBroadphase();
+		    var solver                  = new Ammo.btSequentialImpulseConstraintSolver();
+		    physicsUniverse               = new Ammo.btDiscreteDynamicsWorld(dispatcher, overlappingPairCache, solver, collisionConfiguration);
+		    physicsUniverse.setGravity(new Ammo.btVector3(0, -75, 0));
+		}
+
+
+		function createBoxShapeObject( mesh, scale , position, mass)
+		{
+				var quaternion = {x: 0, y: 0, z: 0, w:  1};
+
+				// ------ Graphics Universe - Three.js ------
+				mesh.position.set(position.x, position.y, position.z);
+
+				// ------ Physics Universe - Ammo.js ------
+				let transform = new Ammo.btTransform();
+				transform.setIdentity();
+				transform.setOrigin( new Ammo.btVector3( position.x, position.y, position.z ) );
+				transform.setRotation( new Ammo.btQuaternion( quaternion.x, quaternion.y, quaternion.z, quaternion.w ) );
+				let defaultMotionState = new Ammo.btDefaultMotionState( transform );
+
+				let structColShape = new Ammo.btBoxShape( new Ammo.btVector3( scale.x, scale.y, scale.z ) );
+				structColShape.setMargin( 0.05 );
+
+				let localInertia = new Ammo.btVector3( 0, 0, 0 );
+				structColShape.calculateLocalInertia( mass, localInertia );
+
+				let RBody_Info = new Ammo.btRigidBodyConstructionInfo( mass, defaultMotionState, structColShape, localInertia );
+				let RBody = new Ammo.btRigidBody( RBody_Info );
+
+				physicsUniverse.addRigidBody( RBody );
+				mesh.userData.physicsBody = RBody;
+
+				rigidBody_List.push(mesh);
+		}
+
+		function initGraphicsUniverse()
+		{
+
+				var background = 0x72645b;
+
+				clock = new THREE.Clock();
+				scene = new THREE.Scene();
+				scene.fog = new THREE.FogExp2(background, 0.0050);
+
+				// ---------------- RENDERER ----------------
+
+				renderer = new THREE.WebGLRenderer( { antialias : true } );
+				renderer.setPixelRatio( window.devicePixelRatio * 1  );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				renderer.setClearColor(background);
+				renderer.shadowMap.enabled = true;
+				document.body.appendChild( renderer.domElement );
+
+				// ---------------- CAMERA ----------------
+
+				camera = new THREE.PerspectiveCamera( 80, window.innerWidth / window.innerHeight, 1, 800 );
+				camera.position.set( 25, 50, 75 );
+				camera.lookAt(new THREE.Vector3(0,5,0));
+				scene.add( camera );
+
+				// ---------------- LIGHTS ----------------
+
+				scene.add( new THREE.AmbientLight( 0xcccccc, 0.5 ) );
+				scene.add( new THREE.HemisphereLight( 0x443333, 0x111122 ) );
+
+				light = new THREE.DirectionalLight(0xFFFFFFF, 1);
+				light.position.set(-1000, 2500, 1000);
+				light.castShadow = true;
+				light.shadow.mapSize.width = 2000;
+				light.shadow.mapSize.height = 2000;
+				light.shadow.camera.near = 2;
+				light.shadow.camera.far = 4000;
+				light.shadow.camera.left = -200;
+				light.shadow.camera.right = 200;
+				light.shadow.camera.top = 200;
+				light.shadow.camera.bottom = -200;
+				scene.add(light);
+
+				// ---------------- EVENTS ----------------
+
+				window.addEventListener( 'resize', onWindowResize, false );
+
+				// ---------------- PERFORMANCE STATS PLUGIN ----------------
+
+				stats = new Stats();
+				stats.showPanel( 0 ); // 0: fps, 1: ms, 2: mb, 3+: custom
+				document.body.appendChild( stats.dom );
+
+				// ---------------- FLOOR ----------------
+
+				const floorMaterial = new THREE.MeshPhysicalMaterial({ color  : 0x999999, metalness : 0, roughness : 1 });
+				const floor = new THREE.Mesh( new THREE.BoxGeometry(4000, 1, 4000) , floorMaterial);
+				floor.receiveShadow = true;
+				scene.add(floor);
+				MeshesToLoad["floor"] = floor;
+
+				// ---------------- CUBE ----------------
+
+				const cube = new THREE.Mesh( new THREE.BoxGeometry(6, 6, 6) , floorMaterial);
+				cube.castShadow = true;
+				cube.position.y = 60;
+				scene.add(cube);
+				MeshesToLoad["cube"] = cube;
+
+		}
+
+		function updatePhysicsUniverse( deltaTime )
+		{
+		    physicsUniverse.stepSimulation( deltaTime, 10 );
+
+				for ( let i = 0; i < rigidBody_List.length; i++ )
+				{
+					let Graphics_Obj = rigidBody_List[ i ];
+					let Physics_Obj = Graphics_Obj.userData.physicsBody;
+
+					let motionState = Physics_Obj.getMotionState();
+					if ( motionState )
+					{
+					    motionState.getWorldTransform( tmpTransformation );
+					    let new_pos = tmpTransformation.getOrigin();
+					    let new_qua = tmpTransformation.getRotation();
+					    Graphics_Obj.position.set( new_pos.x(), new_pos.y(), new_pos.z() );
+					    Graphics_Obj.quaternion.set( new_qua.x(), new_qua.y(), new_qua.z(), new_qua.w() );
+					}
+				}
+		}
+
+		function checkReady()
+		{
+				if(MeshesToLoad["cube"] && MeshesToLoad["floor"] && physicsUniverse)
+				{
+						return true;
+				}
+
+				return false;
+		}
+
+
+		function render()
+		{
+			stats.begin();
+			var delta = clock.getDelta();
+
+			if(is_loaded == false)
+			{
+					if( checkReady() )
+					{
+							// 3D models are ready, let's init physics
+
+							createBoxShapeObject( MeshesToLoad["floor"], new THREE.Vector3(2000, 0.5, 2000) , new THREE.Vector3(0, 0, 0) , 0);
+							createBoxShapeObject( MeshesToLoad["cube"], new THREE.Vector3(3, 3, 3) , new THREE.Vector3(0, 60, 0) , 1);
+
+							is_loaded = true;
+					}
+			}
+			else
+			{
+					updatePhysicsUniverse(delta);
+			}
+
+			renderer.render( scene, camera );
+			stats.end();
+			requestAnimationFrame( render );
+		}
+
+		function onWindowResize()
+		{
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+				renderer.setSize( window.innerWidth, window.innerHeight );
+		}
+
+	</script>
+
+</head>
+
+<body>
+
+</body>

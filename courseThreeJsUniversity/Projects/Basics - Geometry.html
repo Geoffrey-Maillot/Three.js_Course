@@ -1,0 +1,240 @@
+<head>
+
+	<script src="./js/stats.min.js"></script>
+	<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0' />
+
+	<style>
+		body
+		{
+			margin: 0; touch-action: none;
+			background-image: -webkit-gradient(linear, 0 0, 100% 100%, color-stop(0, #877fa8), color-stop(100%, #f9ae91));
+			background-image: -webkit-linear-gradient(135deg, #877fa8, #f9ae91);
+			background-image: -moz-linear-gradient(45deg, #877fa8, #f9ae91);
+			background-image: -ms-linear-gradient(45deg, #877fa8 0, #f9ae91 100%);
+			background-image: -o-linear-gradient(45deg, #877fa8, #f9ae91);
+			background-image: linear-gradient(135deg, #877fa8, #f9ae91);
+		}
+
+		canvas { width: 100%; height: 100% ; touch-action: none;}
+
+	</style>
+
+	<script type="importmap">
+			{
+				"imports": {
+					"three": "./js/build/three.module.js"
+				}
+			}
+	</script>
+
+	<script  type="module">
+
+		import * as THREE from 'three';
+		import { MapControls } from './js/examples/jsm/controls/MapControls.js';
+
+
+		/*
+		* 	--------------------------------------------------------------------------------
+		*
+		*	-------------------------------- GLOBAL VARIABLES --------------------------------
+		*
+		*	--------------------------------------------------------------------------------
+		*/
+
+		// Basic Threejs variables
+		var scene;
+		var camera;
+		var renderer;
+		var clock;
+		var controls;
+
+		// Boolean - True if every 3D object is loaded and ready to use
+		var is_Loaded 			= false;
+
+		// Game objs
+		var cube 						= undefined;	// ThreeJS Mesh	- Cube
+		var cone 						= undefined;	// ThreeJS Mesh	- cone
+		var cylinder 				= undefined;	// ThreeJS Mesh	- cylinder
+		var plane 					= undefined;	// ThreeJS Mesh	- plane
+		var sphere 					= undefined;	// ThreeJS Mesh	- sphere
+		var icosahedron			= undefined;
+		var octahedron			= undefined;
+		var tetrahedron			= undefined;
+		var circle					= undefined;
+		var ring						= undefined;
+		var lathe						= undefined;
+		var taurus					= undefined;
+		var taurusknot			= undefined;
+
+
+
+		// Performance stats
+		var stats;
+
+
+		function init()
+		{
+
+				clock = new THREE.Clock();
+				scene = new THREE.Scene();
+
+				// ---------------- RENDERER ----------------
+				renderer = new THREE.WebGLRenderer( { antialias : true ,  alpha: true} );
+				renderer.setPixelRatio( window.devicePixelRatio  );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				document.body.appendChild( renderer.domElement );  // we add the HTML element to the HTML page
+
+				// ---------------- CAMERA ----------------
+				const aspect = window.innerWidth / window.innerHeight;
+				const frustumSize = 10;
+				camera = new THREE.OrthographicCamera( frustumSize * aspect / - 2, frustumSize * aspect / 2, frustumSize / 2, frustumSize / - 2, 1, 1000 );
+
+				camera.position.set( -50, 50, -50 );
+				camera.lookAt(new THREE.Vector3(0,0,0));
+				scene.add( camera );
+
+				// ---------------- CAMERA CONTROLS ----------------
+				controls = new MapControls( camera, renderer.domElement );
+				controls.enableDamping = true; // an animation loop is required when either damping or auto-rotation are enabled
+				controls.dampingFactor = 0.05;
+				controls.screenSpacePanning = false;
+				controls.minDistance = 2;
+				controls.maxDistance = 20;
+				controls.maxPolarAngle = Math.PI / 2;
+
+
+				// ---------------- LIGHTS ----------------
+				var ambientLight = new THREE.AmbientLight( 0xcccccc, 0.2 );
+				scene.add( ambientLight );
+
+				const directionalLight = new THREE.DirectionalLight( 0xffffff, 0.6 );
+				directionalLight.position.set( - 1, 0.9, 0.4 );
+				scene.add( directionalLight );
+
+				// ---------------- CALLING LOADING AND INIT FUNCTIONS ----------------
+
+				const material = new THREE.MeshLambertMaterial({ side : THREE.DoubleSide});
+
+				const geometry = new THREE.BoxGeometry( 2, 2, 2 );
+				cube = new THREE.Mesh( geometry, material );
+				scene.add( cube );
+
+				const geometry_cone = new THREE.ConeGeometry( 1.2, 2, 64 );
+				cone = new THREE.Mesh( geometry_cone, material );
+				cone.position.x = 3;
+				cone.position.z = -3;
+				scene.add( cone );
+
+				const geometry_cylinder = new THREE.CylinderGeometry( 1, 1, 2, 64, 32 );
+				cylinder = new THREE.Mesh( geometry_cylinder, material );
+				cylinder.position.x = 6;
+				cylinder.position.z = -6;
+				scene.add( cylinder );
+
+				const geometry_plane = new THREE.PlaneGeometry( 2, 2, 2, 2 );
+				plane = new THREE.Mesh( geometry_plane, material );
+				plane.position.x = -3;
+				plane.position.z = 3;
+				plane.rotation.x = Math.PI/2;
+				scene.add( plane );
+
+				const geometry_sphere = new THREE.SphereGeometry( 1.2, 64, 64 );
+				sphere = new THREE.Mesh( geometry_sphere, material );
+				sphere.position.x = -6;
+				sphere.position.z = 6;
+				scene.add( sphere );
+
+				const geometry_ico = new THREE.IcosahedronGeometry( 1.2 );
+				icosahedron = new THREE.Mesh( geometry_ico, material );
+				icosahedron.position.x = 3;
+				icosahedron.position.z = 3;
+				scene.add( icosahedron );
+
+				const geometry_tetra = new THREE.TetrahedronGeometry( 1.2 );
+				tetrahedron = new THREE.Mesh( geometry_tetra, material );
+				tetrahedron.position.x = 0;
+				tetrahedron.position.z = 6;
+				scene.add( tetrahedron );
+
+				const geometry_oct = new THREE.OctahedronGeometry( 1.2 );
+				octahedron = new THREE.Mesh( geometry_oct, material );
+				octahedron.position.x = -3;
+				octahedron.position.z = 9;
+				scene.add( octahedron );
+
+				const geometry_circle = new THREE.CircleGeometry( 1.2, 64, 0, Math.PI * 2  );
+				circle = new THREE.Mesh( geometry_circle, material );
+				circle.position.x = 6;
+				circle.position.z = 0;
+				circle.rotation.x = Math.PI/2;
+				scene.add( circle );
+
+				const geometry_ring = new THREE.RingGeometry( 0.4, 1.2, 64, 5, 0, Math.PI * 2 );
+				ring = new THREE.Mesh( geometry_ring, material );
+				ring.position.x = 9;
+				ring.position.z = -3;
+				ring.rotation.x = Math.PI/2;
+				scene.add( ring );
+
+				const points = [];
+
+				for ( let i = 0; i < 10; i ++ )
+				{
+						points.push(new THREE.Vector2(Math.sin(i * 0.2) * 3 + 3, (i - 5) * .8));
+				}
+
+				const geometry_lathe =  new THREE.LatheGeometry( points, 64 );
+				lathe = new THREE.Mesh( geometry_lathe, material );
+				lathe.position.x = -3;
+				lathe.position.z = -3;
+				lathe.scale.set(0.2, 0.2, 0.2);
+				scene.add( lathe );
+
+				const geometry_taurus = new THREE.TorusGeometry( 0.8, 0.4, 64, 64 )
+				taurus = new THREE.Mesh( geometry_taurus, material );
+				taurus.position.x = -6;
+				taurus.position.z = -0;
+				taurus.rotation.x = Math.PI/2;
+				scene.add( taurus );
+
+				const geometry_taurusknot = new THREE.TorusKnotGeometry( 0.8, 0.3, 64, 64 )
+				taurusknot = new THREE.Mesh( geometry_taurusknot, material );
+				taurusknot.position.x = 0;
+				taurusknot.position.z = -6;
+				taurusknot.rotation.x = Math.PI/2;
+				scene.add( taurusknot );
+
+				// ---------------- PERFORMANCE STATS PLUGIN ----------------
+				stats = new Stats();
+				stats.showPanel( 0 ); // 0: fps, 1: ms, 2: mb, 3+: custom
+				document.body.appendChild( stats.dom );
+
+
+				// ---------------- STARTING THE GAME MAIN LOOP ----------------
+				render();
+		}
+
+		function render()
+		{
+				stats.begin();										//performance stats
+
+				var delta = clock.getDelta();			//get delta time between two frames
+				var elapsed = clock.elapsedTime;	//get elapsed time
+
+				controls.update();
+
+				renderer.render( scene, camera ); 	// We are rendering the 3D world
+				stats.end(); 						// stats , fps ratio ect...
+				requestAnimationFrame( render );	// we are calling render() again,  to loop
+		}
+
+
+
+		init();
+
+	</script>
+
+</head>
+
+<body>
+</body>

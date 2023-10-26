@@ -1,0 +1,112 @@
+<html>
+  <head>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0' />
+
+    <style>
+    body
+		{
+			margin: 0; touch-action: none;
+			background-image: -webkit-gradient(linear, 0 0, 100% 100%, color-stop(0, #877fa8), color-stop(100%, #f9ae91));
+			background-image: -webkit-linear-gradient(135deg, #877fa8, #f9ae91);
+			background-image: -moz-linear-gradient(45deg, #877fa8, #f9ae91);
+			background-image: -ms-linear-gradient(45deg, #877fa8 0, #f9ae91 100%);
+			background-image: -o-linear-gradient(45deg, #877fa8, #f9ae91);
+			background-image: linear-gradient(135deg, #877fa8, #f9ae91);
+		}
+
+        canvas  { height : 100%; width : 100%; }
+    </style>
+
+    <script type="importmap">
+        {
+          "imports": {
+            "three": "./js/build/three.module.js"
+          }
+        }
+    </script>
+
+    <script  type="module">
+
+      import * as THREE from 'three';
+
+      var scene;
+      var renderer;
+      var camera;
+
+      var group;
+
+      function init()
+      {
+          scene = new THREE.Scene();
+
+          renderer = new THREE.WebGLRenderer({antialias : true, alpha : true});
+          renderer.setPixelRatio(window.devicePixelRatio);
+          renderer.setSize(window.innerWidth, window.innerHeight);
+          renderer.setClearColor(0x2c3e50, 0);
+          document.body.appendChild(renderer.domElement);
+
+          // ---- CAMERA ----
+
+          camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 10000 );
+          camera.position.set(0, 0, 800);
+          camera.lookAt( new THREE.Vector3(0, 0, 0) );
+          scene.add(camera);
+
+
+          // --------------------------------
+
+          var ambientLight = new THREE.AmbientLight(0xcccccc, 0.5);
+          scene.add(ambientLight);
+
+          var directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+          scene.add(directionalLight);
+
+          /*const points = [];
+          points.push( new THREE.Vector2( 50 , 0  ) );
+          points.push( new THREE.Vector2( 200, 100) );
+          points.push( new THREE.Vector2( 350, 300) );*/
+
+          group = new THREE.Group();
+
+    		  //var Geo     = new THREE.BoxGeometry(300, 300, 300);
+          //var Geo     = new THREE.ConeGeometry(400, 500, 64);
+          //var Geo     = new THREE.CylinderGeometry(200, 200, 700, 8, 8);
+          //var Geo     = new THREE.PlaneGeometry(400, 400, 2, 2);
+          //var Geo     = new THREE.SphereGeometry(300, 16, 16);
+          //var Geo     = new THREE.IcosahedronGeometry(300, 0);
+          //var Geo     = new THREE.TetrahedronGeometry(300, 0);
+          //var Geo     = new THREE.OctahedronGeometry(300, 0);
+          //var Geo     = new THREE.CircleGeometry(300, 8, Math.PI/ 2, Math.PI + Math.PI/ 4);
+          //var Geo     = new THREE.RingGeometry(100, 250, 8, 32 /*, 0, Math.PI*2*/);
+          //var Geo     = new THREE.LatheGeometry(points, 64, Math.PI/ 2, Math.PI + Math.PI/ 2);
+          //var Geo     = new THREE.TorusGeometry(300, 100, 32, 32, Math.PI + Math.PI/ 2);
+          var Geo     = new THREE.TorusKnotGeometry(300, 75, 264, 32, 10, 6);
+
+    			const lineMaterial = new THREE.LineBasicMaterial( { color: 0xffffff, transparent: true, opacity: 0.5 , linewidth  : 1.5} );
+    			const meshMaterial = new THREE.MeshPhongMaterial( { color: 0xc0392b, side: THREE.DoubleSide, flatShading: true } );
+
+    			group.add( new THREE.LineSegments( Geo, lineMaterial ) );
+    			group.add( new THREE.Mesh( Geo, meshMaterial ) );
+          //group.position.y = 100;
+    			scene.add( group );
+
+
+          render();
+      }
+
+      function render()
+      {
+          //group.rotation.y += 0.01;
+          //group.rotation.x += 0.005;
+
+          renderer.render(scene, camera);
+          requestAnimationFrame(render);
+      }
+
+      init();
+
+    </script>
+  </head>
+
+  <body></body>
+</html>

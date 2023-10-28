@@ -1,86 +1,25 @@
 <html>
   <head>
-    <meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0' />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0"
+    />
 
     <style>
-        body    { margin : 0; }
+      body {
+        margin: 0;
+      }
     </style>
-
-    <script type="importmap">
-        {
-          "imports": {
-            "three": "./js/build/three.module.js"
-          }
-        }
-    </script>
-
-    <script  type="module">
-
-      import * as THREE from 'three';
-
-      var scene;
-      var renderer;
-      var camera;
-      var cube;
-
-      var height = 300;
-      var width = 300;
-
-      function init()
-      {
-          scene = new THREE.Scene();
-
-          var canvasHTML = document.getElementById("mycanvas");
-
-          renderer = new THREE.WebGLRenderer({antialias : true, canvas : canvasHTML, alpha : true});
-          renderer.setPixelRatio(window.devicePixelRatio);
-          renderer.setSize(width, height);
-          renderer.setClearColor(0x16a085, 0);
-          //document.body.appendChild(renderer.domElement);
-
-          // ---- CAMERA ----
-
-          camera = new THREE.PerspectiveCamera(75, width / height, 1, 10000 );
-          camera.position.set(-500, 400, -500);
-          camera.lookAt( new THREE.Vector3(0, 0, 0) );
-          scene.add(camera);
-
-          camera.position.set(-500, 500, -500);
-          camera.lookAt( new THREE.Vector3(0, 0, 0) );
-          scene.add(camera);
-
-          // --------------------------------
-
-          var ambientLight = new THREE.AmbientLight(0xcccccc, 0.5);
-          scene.add(ambientLight);
-
-          var directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-          scene.add(directionalLight);
-
-          var cubeGeo     = new THREE.BoxGeometry(300, 300, 300);
-          var cubeMat     = new THREE.MeshPhongMaterial({color : 0x34495e});
-
-          cube            = new THREE.Mesh(cubeGeo, cubeMat);
-          cube.position.set(0, 0, 0);
-          scene.add(cube);
-
-          render();
-      }
-
-      function render()
-      {
-          renderer.render(scene, camera);
-          requestAnimationFrame(render);
-      }
-
-      init();
-
-    </script>
+    <script
+      type="module"
+      defer
+      src="./exemple_ts/2_3 - WebGLRenderer options - Copie.ts"
+    ></script>
   </head>
 
   <body>
-      <h1>Bonjour</h1>
-      <canvas id="mycanvas" height="300" width="300"></canvas>
-      <p>Je suis Thomas</p>
+    <h1>Bonjour</h1>
+    <canvas id="canvas"> </canvas>
+    <p>Je suis Thomas</p>
   </body>
 </html>

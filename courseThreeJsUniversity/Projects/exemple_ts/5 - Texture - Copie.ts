@@ -130,14 +130,14 @@ function InitMap() {
   loader.load("Assets/pixel_art_border.png", (loaded_texture) => {
     loaded_texture.magFilter = THREE.NearestFilter;
 
-    loaded_texture.repeat.set(1, 1);
-
-    loaded_texture.center.set(0.5, 0.5);
-    loaded_texture.rotation = THREE.MathUtils.degToRad(45);
-
     const material = new THREE.MeshLambertMaterial({
       map: loaded_texture,
     });
+
+    loaded_texture.wrapS = THREE.RepeatWrapping;
+    loaded_texture.wrapT = THREE.RepeatWrapping;
+
+    loaded_texture.repeat.set(2, 2);
 
     const geometry = new THREE.BoxGeometry(2, 2, 2);
     cube = new THREE.Mesh(geometry, material);

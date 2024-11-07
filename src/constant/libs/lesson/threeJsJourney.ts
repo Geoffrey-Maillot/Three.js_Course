@@ -4,16 +4,11 @@ export const threeJsJourneyLessons: Array<Lesson> = [
   {
     title: "03 - Basic scene",
     link: "/courseThreeJsJourney/03-basic-scene.html",
-    done: false,
+    done: true,
   },
   {
-    title: "04 - Local server",
-    link: "/courseThreeJsJourney/04-local-server.html",
-    done: false,
-  },
-  {
-    title: "05 - Transform objects",
-    link: "/courseThreeJsJourney/05-transform-objects.html",
+    title: "04 - Transform objects",
+    link: "/courseThreeJsJourney/04-transform-objects.html",
     done: false,
   },
   {

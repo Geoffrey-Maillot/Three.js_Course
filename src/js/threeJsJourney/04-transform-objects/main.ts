@@ -3,9 +3,9 @@ import { initPage } from "../../initPage";
 import { threeJsJourneyLessons } from "../../../constant/index";
 
 initPage({
-  titlePage: "Basic Scene",
-  titleHeader: "03 - Scene Basic",
-  originalLesson: "https://threejs-journey.com/lessons/first-threejs-project",
+  titlePage: "Transform Object",
+  titleHeader: "04 - Transform Object",
+  originalLesson: "https://threejs-journey.com/lessons/transform-objects",
   lessonsList: threeJsJourneyLessons,
 });
 

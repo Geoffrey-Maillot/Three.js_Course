@@ -9,11 +9,11 @@ export const threeJsJourneyLessons: Array<Lesson> = [
   {
     title: "04 - Transform objects",
     link: "/courseThreeJsJourney/04-transform-objects.html",
-    done: false,
+    done: true,
   },
   {
-    title: "06 - Animations",
-    link: "/courseThreeJsJourney/06-animations.html",
+    title: "05 - Animations",
+    link: "/courseThreeJsJourney/05-animations.html",
     done: false,
   },
   {

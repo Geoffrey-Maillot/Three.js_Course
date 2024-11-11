@@ -14,16 +14,16 @@ export const threeJsJourneyLessons: Array<Lesson> = [
   {
     title: "05 - Animations",
     link: "/courseThreeJsJourney/05-animations.html",
-    done: false,
+    done: true,
   },
   {
-    title: "07 - Cameras",
-    link: "/courseThreeJsJourney/07-cameras.html",
-    done: false,
+    title: "06 - Cameras",
+    link: "/courseThreeJsJourney/06-cameras.html",
+    done: true,
   },
   {
-    title: "08 - Fullscreen and resizing",
-    link: "/courseThreeJsJourney/08-fullscreen-and-resizing.html",
+    title: "07 - Fullscreen and resizing",
+    link: "/courseThreeJsJourney/07-fullscreen-and-resizing.html",
     done: false,
   },
   {

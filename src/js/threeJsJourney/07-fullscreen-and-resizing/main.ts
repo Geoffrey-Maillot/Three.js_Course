@@ -13,8 +13,9 @@ initPage({
 /**
  * Base
  */
-// Canvas
-const canvas = document.querySelector("canvas.webgl") as HTMLCanvasElement;
+
+// Container
+const container = document.getElementById("app") as HTMLDivElement;
 
 // Scene
 const scene = new THREE.Scene();
@@ -31,8 +32,8 @@ scene.add(mesh);
  * Sizes
  */
 const sizes = {
-  width: 800,
-  height: 600,
+  width: container.clientWidth,
+  height: container.clientHeight,
 };
 
 /**
@@ -48,17 +49,17 @@ const camera = new THREE.PerspectiveCamera(
 camera.position.z = 3;
 scene.add(camera);
 
-// Controls
-const controls = new OrbitControls(camera, canvas);
-controls.enableDamping = true;
-
 /**
  * Renderer
  */
-const renderer = new THREE.WebGLRenderer({
-  canvas: canvas,
-});
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+container.append(renderer.domElement);
+
 renderer.setSize(sizes.width, sizes.height);
+
+// Controls
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
 
 /**
  * Animate
@@ -73,9 +74,25 @@ const tick = () => {
 
   // Render
   renderer.render(scene, camera);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
   // Call tick again on the next frame
   window.requestAnimationFrame(tick);
 };
 
 tick();
+
+// Resizer
+window.addEventListener("resize", () => {
+  // Update Sizes
+  sizes.width = container.clientWidth;
+  sizes.height = container.clientHeight;
+
+  // Update Camera
+  camera.aspect = sizes.width / sizes.height;
+  camera.updateProjectionMatrix();
+
+  // Update Renderer
+  renderer.setSize(sizes.width, sizes.height);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+});

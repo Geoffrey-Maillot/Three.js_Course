@@ -24,16 +24,16 @@ export const threeJsJourneyLessons: Array<Lesson> = [
   {
     title: "07 - Fullscreen and resizing",
     link: "/courseThreeJsJourney/07-fullscreen-and-resizing.html",
-    done: false,
+    done: true,
   },
   {
-    title: "09 - Geometries",
-    link: "/courseThreeJsJourney/09-geometries.html",
-    done: false,
+    title: "08 - Geometries",
+    link: "/courseThreeJsJourney/08-geometries.html",
+    done: true,
   },
   {
-    title: "10 - Debug ui",
-    link: "/courseThreeJsJourney/10-debug-ui.html",
+    title: "10 - Debug UI",
+    link: "/courseThreeJsJourney/09-debug-ui.html",
     done: false,
   },
   {

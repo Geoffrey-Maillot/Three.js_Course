@@ -26,7 +26,7 @@
   </head>
   <body>
     <header class="navbar flex gap-4 bg-base-200">
-      <label class="swap-rotate btn btn-circle swap" for="my-drawer">
+      <label class="btn btn-circle swap swap-rotate" for="my-drawer">
         <!-- this hidden checkbox controls the state -->
         <input type="checkbox" />
 
@@ -122,8 +122,10 @@
     <!-- Canva -->
     <div
       id="app"
-      class="flex h-[calc(100vh_-_64px)] items-center justify-center"
-    ></div>
+      class="relative flex h-[calc(100vh_-_64px)] items-center justify-center"
+    >
+      <div class="absolute right-3 top-3" id="pane-container"></div>
+    </div>
 
     <!-- Side menu -->
     <div class="drawer">

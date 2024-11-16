@@ -32,13 +32,13 @@ export const threeJsJourneyLessons: Array<Lesson> = [
     done: true,
   },
   {
-    title: "10 - Debug UI",
+    title: "09 - Debug UI",
     link: "/courseThreeJsJourney/09-debug-ui.html",
-    done: false,
+    done: true,
   },
   {
-    title: "11 - Textures",
-    link: "/courseThreeJsJourney/11-textures.html",
+    title: "10 - Textures",
+    link: "/courseThreeJsJourney/10-textures.html",
     done: false,
   },
   {

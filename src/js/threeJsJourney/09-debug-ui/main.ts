@@ -26,7 +26,10 @@ const paneContainer = document.getElementById(
 ) as HTMLDivElement;
 
 // Initialisation du panneau de debug Tweakpane
-const pane = new Pane({ title: "Debug UI", container: paneContainer });
+const pane = new Pane({
+  title: "Debug UI",
+  container: paneContainer,
+});
 
 // Création de la scène Three.js
 const scene = new THREE.Scene();
@@ -38,6 +41,15 @@ const scene = new THREE.Scene();
 // Paramètres de debug pour le cube
 const tweakPaneDebug = {
   cube: {
+    parameters: {
+      // cube parameters
+      width: 1,
+      height: 1,
+      depth: 1,
+      widthSegments: 1,
+      heightSegments: 1,
+      depthSegments: 1,
+    },
     color: "#686acf",
     isAnimation: false,
     rotation: () => {
@@ -59,12 +71,21 @@ const tweakPaneDebug = {
 };
 
 // Création du cube
-const geometry = new THREE.BoxGeometry(1, 1, 1);
+const geometry = new THREE.BoxGeometry(
+  tweakPaneDebug.cube.parameters.width,
+  tweakPaneDebug.cube.parameters.height,
+  tweakPaneDebug.cube.parameters.depth,
+  tweakPaneDebug.cube.parameters.widthSegments,
+  tweakPaneDebug.cube.parameters.heightSegments,
+  tweakPaneDebug.cube.parameters.depthSegments,
+);
 const material = new THREE.MeshBasicMaterial({
   color: tweakPaneDebug.cube.color,
+  wireframe: true,
 });
 const mesh = new THREE.Mesh(geometry, material);
 scene.add(mesh);
+console.log(mesh);
 
 // Configuration des contrôles Tweakpane pour le cube
 const cubeFolder = pane.addFolder({ title: "Cube" });
@@ -95,10 +116,37 @@ cubeFolder
   .addBinding(tweakPaneDebug.cube, "color", {
     view: "color",
     label: "Color",
-    inline: true,
   })
   .on("change", ({ value }) => {
     material.color.set(value);
+  });
+
+const changeGeometry = () => {
+  // Cette fonctionnalité permet de modifier la géométrie du cube en fonction des paramètres ajustés dans l'interface utilisateur.
+  // Le mesh.geometry.dispose() est utilisé pour libérer les ressources de la géométrie précédente avant de créer une nouvelle géométrie.
+  mesh.geometry.dispose();
+  // Si les paramètres sont modifiés, une nouvelle géométrie est créée avec les nouvelles valeurs.
+  mesh.geometry = new THREE.BoxGeometry(
+    tweakPaneDebug.cube.parameters.width,
+    tweakPaneDebug.cube.parameters.height,
+    tweakPaneDebug.cube.parameters.depth,
+    tweakPaneDebug.cube.parameters.widthSegments,
+    tweakPaneDebug.cube.parameters.heightSegments,
+    tweakPaneDebug.cube.parameters.depthSegments,
+  );
+};
+
+const segmentFolder = cubeFolder.addFolder({ title: "Segments" });
+segmentFolder
+  .addBinding(tweakPaneDebug.cube.parameters, "widthSegments", {
+    view: "number",
+    label: "Width",
+    min: 1,
+    max: 10,
+    step: 1,
+  })
+  .on("change", () => {
+    changeGeometry();
   });
 
 // Bouton pour déclencher l'animation
@@ -173,4 +221,22 @@ window.addEventListener("resize", () => {
   // Update Renderer
   renderer.setSize(sizes.width, sizes.height);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+});
+
+/**
+ * Panel de debug
+ */
+
+// Pour cacher le panneau
+pane.hidden = true;
+
+// Pour afficher le panneau
+pane.hidden = false;
+
+// Toggle avec une touche du clavier
+window.addEventListener("keydown", (e) => {
+  if (e.key === "h") {
+    // 'h' pour hide/show
+    pane.hidden = !pane.hidden;
+  }
 });

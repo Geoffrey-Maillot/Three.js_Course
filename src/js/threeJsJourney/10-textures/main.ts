@@ -39,15 +39,19 @@ const textureManager = new THREE.LoadingManager();
 const textureLoader = new THREE.TextureLoader(textureManager);
 
 // textures
-const color = textureLoader.load("/textures/door/color.jpg");
-const ambientOcclusion = textureLoader.load(
+const colorTexture = textureLoader.load("/textures/door/color.jpg");
+const checkerboardTexture = textureLoader.load(
+  "/textures/checkerboard-1024x1024.png",
+);
+const minecraftTexture = textureLoader.load("/textures/minecraft.png");
+const ambientOcclusionTexture = textureLoader.load(
   "/textures/door/ambientOcclusion.jpg",
 );
 const roughness = textureLoader.load("/textures/door/roughness.jpg");
-const normal = textureLoader.load("/textures/door/normal.jpg");
-const metalness = textureLoader.load("/textures/door/metalness.jpg");
-const height = textureLoader.load("/textures/door/height.jpg");
-const alpha = textureLoader.load("/textures/door/alpha.jpg");
+const normalTexture = textureLoader.load("/textures/door/normal.jpg");
+const metalnessTexture = textureLoader.load("/textures/door/metalness.jpg");
+const heightTexture = textureLoader.load("/textures/door/height.jpg");
+const alphaTexture = textureLoader.load("/textures/door/alpha.jpg");
 
 textureManager.onLoad = () => {
   console.log(" 🎆texture loaded");
@@ -61,13 +65,41 @@ textureManager.onProgress = (url, loaded, total) => {
   console.log("texture loading", url, loaded, total);
 };
 
-color.colorSpace = THREE.SRGBColorSpace;
+// Set color space to sRGB
+// ⚠️ Important pour que la texture soit affichée correctement
+colorTexture.colorSpace = THREE.SRGBColorSpace;
+
+/**
+ * Transform texture
+ */
+// === Repeat texture
+//colorTexture.repeat.set(2, 2);
+//colorTexture.wrapS = THREE.RepeatWrapping;
+//colorTexture.wrapT = THREE.RepeatWrapping;
+
+// === transform texture
+//colorTexture.rotation = Math.PI * 0.25;
+//colorTexture.center.set(0.5, 0.5);
+
+// === offset texture
+//colorTexture.offset.set(0.5, 0.5);
+
+// === Mipmap
+// colorTexture.minFilter = THREE.LinearMipmapLinearFilter; // Default
+
+// ⚠️ Si on utilise un filtre de type Nearest, il faut désactiver les mipmaps
+minecraftTexture.generateMipmaps = false;
+
+// Définit le filtre de minification (réduction) de la texture
+// NearestFilter utilise le pixel le plus proche sans interpolation
+minecraftTexture.minFilter = THREE.NearestFilter;
+minecraftTexture.magFilter = THREE.NearestFilter;
 
 /**
  * Object
  */
 const geometry = new THREE.BoxGeometry(1, 1, 1);
-const material = new THREE.MeshBasicMaterial({ map: color });
+const material = new THREE.MeshBasicMaterial({ map: minecraftTexture });
 const mesh = new THREE.Mesh(geometry, material);
 scene.add(mesh);
 

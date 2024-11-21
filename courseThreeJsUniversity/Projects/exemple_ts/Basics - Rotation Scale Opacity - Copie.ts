@@ -11,7 +11,6 @@ import {
   Mesh,
   Clock,
 } from "three";
-import { degToRad } from "three/src/math/MathUtils";
 
 // Variable
 let scene: Scene;

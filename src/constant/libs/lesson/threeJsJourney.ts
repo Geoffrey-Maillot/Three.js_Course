@@ -39,11 +39,11 @@ export const threeJsJourneyLessons: Array<Lesson> = [
   {
     title: "10 - Textures",
     link: "/courseThreeJsJourney/10-textures.html",
-    done: false,
+    done: true,
   },
   {
-    title: "12 - Materials",
-    link: "/courseThreeJsJourney/12-materials.html",
+    title: "11 - Materials",
+    link: "/courseThreeJsJourney/11-materials.html",
     done: false,
   },
   {
